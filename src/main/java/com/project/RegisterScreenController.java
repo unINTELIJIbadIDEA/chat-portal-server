@@ -6,65 +6,52 @@ import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.AnchorPane;
-import javafx.scene.layout.Pane;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 
-
-import java.io.IOException;
 import java.net.URL;
 
-public class StartScreenController {
+
+public class RegisterScreenController {
+    @FXML
+    private Button registerButton;
 
     @FXML
-    private Button ButtonLogin;
-
-    @FXML
-    private Button ButtonSignUp;
+    private Button backButton;
 
     @FXML
     private void initialize() {
         // Dodaj akcje dla przycisków
-        ButtonLogin.setOnAction(event -> {handleSignIn();
+        registerButton.setOnAction(event -> handleLoginAction());
+        backButton.setOnAction(event -> handleBackAction());
 
-        });
-        ButtonSignUp.setOnAction(event -> handleSignUp());
+        registerButton.setOnMouseEntered(this::onMouseEntered);
+        registerButton.setOnMouseExited(this::onMouseExited);
+        registerButton.setOnMousePressed(this::onMousePressed);
+        registerButton.setOnMouseReleased(this::onMouseReleased);
 
-        // Animacja najechania
-        ButtonLogin.setOnMouseEntered(this::onMouseEntered);
-        ButtonLogin.setOnMouseExited(this::onMouseExited);
-        ButtonLogin.setOnMousePressed(this::onMousePressed);
-        ButtonLogin.setOnMouseReleased(this::onMouseReleased);
-
-        ButtonSignUp.setOnMouseEntered(this::onMouseEntered);
-        ButtonSignUp.setOnMouseExited(this::onMouseExited);
-        ButtonSignUp.setOnMousePressed(this::onMousePressed);
-        ButtonSignUp.setOnMouseReleased(this::onMouseReleased);
+        backButton.setOnMouseEntered(this::onMouseEntered);
+        backButton.setOnMouseExited(this::onMouseExited);
+        backButton.setOnMousePressed(this::onMousePressed);
+        backButton.setOnMouseReleased(this::onMouseReleased);
     }
 
-    // Akcja dla przycisku "SIGN IN"
-    private void handleSignIn() {
-        System.out.println("Przycisk SIGN IN kliknięty");
-        try {
-            URL resource = HelloApplication.class.getResource("loginscreen.fxml");
-            FXMLLoader fxmlLoader = new FXMLLoader(resource);
-            AnchorPane loginScreen = fxmlLoader.load();
-            Stage stage = (Stage) ButtonLogin.getScene().getWindow();
-            stage.setScene(new Scene(loginScreen));
-            stage.show();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+    // Akcja dla przycisku "Zarejestruj"
+    @FXML
+    private void handleLoginAction() {
+        System.out.println("Zarejestrowano!");
+        // Dodaj logikę logowania (np. sprawdzenie danych logowania)
     }
 
-    // Akcja dla przycisku "SIGN UP"
-    private void handleSignUp() {
-        System.out.println("Przycisk SIGN UP kliknięty");
+    // Akcja dla przycisku "Powrót"
+    @FXML
+    private void handleBackAction() {
+        System.out.println("Powrót do poprzedniego ekranu.");
         try {
-            URL resource = HelloApplication.class.getResource("registerscreen.fxml");
+            URL resource = HelloApplication.class.getResource("startscreen.fxml");
             FXMLLoader fxmlLoader = new FXMLLoader(resource);
             AnchorPane loginScreen = fxmlLoader.load();
-            Stage stage = (Stage) ButtonSignUp.getScene().getWindow();
+            Stage stage = (Stage) backButton.getScene().getWindow();
             stage.setScene(new Scene(loginScreen));
             stage.show();
         } catch (Exception e) {
@@ -88,7 +75,7 @@ public class StartScreenController {
     private void onMousePressed(MouseEvent event) {
         Button button = (Button) event.getSource();
         ScaleTransition scaleTransition = new ScaleTransition(Duration.millis(150), button);
-        scaleTransition.setToX(0.9);
+        scaleTransition.setToX(0.9); // Zmniejsz przycisk
         scaleTransition.setToY(0.9);
         scaleTransition.play();
     }
@@ -97,7 +84,7 @@ public class StartScreenController {
     private void onMouseReleased(MouseEvent event) {
         Button button = (Button) event.getSource();
         ScaleTransition scaleTransition = new ScaleTransition(Duration.millis(150), button);
-        scaleTransition.setToX(1.0);
+        scaleTransition.setToX(1.0); // Przywróć oryginalny rozmiar
         scaleTransition.setToY(1.0);
         scaleTransition.play();
     }
