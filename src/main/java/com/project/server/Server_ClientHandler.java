@@ -5,6 +5,7 @@ import com.project.utils.Message;
 import java.io.*;
 import java.net.Socket;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CopyOnWriteArrayList;
 
@@ -26,6 +27,34 @@ public class Server_ClientHandler implements Callable<Void> {
         out.flush();
     }
 
+    private void broadcastMessage(Message message) {
+        SessionManager sessionManager = SessionManager.getInstance();
+        CopyOnWriteArrayList<Server_ClientHandler> clients = sessionManager.getSessions(roomId);
+
+        for (Server_ClientHandler client : clients) {
+            try {
+                if (!client.equals(this)) {
+                    client.sendMessage(message);
+                }
+            } catch (IOException e) {
+                sessionManager.removeClientFromSession(roomId, client);
+            }
+        }
+    }
+
+    private void handleJoin(Message message) throws IOException {
+        String newRoomId = message.content().substring(6);
+        SessionManager sessionManager = SessionManager.getInstance();
+
+        if (!sessionManager.sessionExists(newRoomId)) {
+            sessionManager.createSession(newRoomId);
+        }
+
+        sessionManager.addClientToSession(newRoomId, this);
+        this.roomId = newRoomId;
+        sendMessage(new Message(0, newRoomId, 0, "Joined room: " + newRoomId, LocalDateTime.now()));
+    }
+
     @Override
     public Void call() {
         try {
@@ -34,30 +63,10 @@ public class Server_ClientHandler implements Callable<Void> {
 
                 if (roomId == null) {
                     if (message.content().startsWith("/join ")) {
-                        String newRoomId = message.content().substring(6);
-                        SessionManager sessionManager = SessionManager.getInstance();
-
-                        if (!sessionManager.sessionExists(newRoomId)) {
-                            sessionManager.createSession(newRoomId);
-                        }
-
-                        sessionManager.addClientToSession(newRoomId, this);
-                        this.roomId = newRoomId;
-                        sendMessage(new Message(0, newRoomId, 0, "Joined room: " + newRoomId, LocalDate.now()));
+                        handleJoin(message);
                     }
                 } else {
-                    SessionManager sessionManager = SessionManager.getInstance();
-                    CopyOnWriteArrayList<Server_ClientHandler> clients = sessionManager.getSessions(roomId);
-
-                    for (Server_ClientHandler client : clients) {
-                        try {
-                            if (!client.equals(this)) { // Optional: exclude sender
-                                client.sendMessage(message);
-                            }
-                        } catch (IOException e) {
-                            sessionManager.removeClientFromSession(roomId, client);
-                        }
-                    }
+                    broadcastMessage(message);
                 }
             }
         } catch (IOException | ClassNotFoundException e) {
@@ -74,4 +83,6 @@ public class Server_ClientHandler implements Callable<Void> {
         }
         return null;
     }
+
+
 }
