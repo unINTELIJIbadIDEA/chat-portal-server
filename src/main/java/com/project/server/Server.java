@@ -8,23 +8,21 @@ import java.util.concurrent.Executors;
 
 public class Server {
 
-    private final int portNumber;
+    private final ExecutorService executor;
 
-    private final ExecutorService executor = Executors.newCachedThreadPool();
-
-    public Server(int portNumber) {
-        this.portNumber = portNumber;
+    public Server() {
+        executor = Executors.newCachedThreadPool();
     }
 
     public void runServer(){
 
-        try (ServerSocket serverSocket = new ServerSocket(portNumber)) {
+        try (ServerSocket serverSocket = new ServerSocket(ServerProperties.PORT)) {
 
             while (true) {
                 Socket socket = serverSocket.accept();
                 System.out.println("New connection from " + socket.getRemoteSocketAddress());
 
-                executor.submit(new Server_ClientSession(socket));
+                executor.submit(new Server_ClientHandler(socket));
             }
 
         } catch (IOException e) {
@@ -36,7 +34,7 @@ public class Server {
 
     public static void main(String[] args) {
 
-        Server server = new Server(2137);
+        Server server = new Server();
         server.runServer();
 
     }
