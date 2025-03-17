@@ -1,10 +1,11 @@
 package com.project.server;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
+import com.project.utils.Message;
+
+import java.io.*;
 import java.net.Socket;
+import java.time.LocalDate;
+import java.util.Date;
 import java.util.concurrent.Callable;
 
 public class Server_ClientSession implements Callable<Void> {
@@ -19,20 +20,23 @@ public class Server_ClientSession implements Callable<Void> {
     public Void call() {
 
         try {
-            BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-            PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
+            ObjectInputStream in = new ObjectInputStream(socket.getInputStream());
+            ObjectOutputStream out = new ObjectOutputStream(socket.getOutputStream());
 
             while (true) {
-                String message = in.readLine();
+                Message message = (Message) in.readObject();
 
-                if (message.equals("exit")) {
+                if (message.content().equals("exit")) {
                     break;
                 }
 
-                out.println("[SERVER]: " + message);
+                System.out.println("Message received from: " + message.sender_id());
+
+                out.writeObject(new Message(0,0, 0, message.content(), LocalDate.now()));
+                out.flush();
             }
 
-        } catch (IOException e) {
+        } catch (IOException | ClassNotFoundException e) {
             System.out.println("[SYSTEM]: " + e.getMessage());
         } finally {
             try {
