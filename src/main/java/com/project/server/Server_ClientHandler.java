@@ -61,12 +61,12 @@ public class Server_ClientHandler implements Callable<Void> {
             while (!socket.isClosed()) {
                 Message message = (Message) in.readObject();
 
-                if (roomId == null) {
-                    if (message.content().startsWith("/join ")) {
-                        handleJoin(message);
-                    }
+                if (roomId == null && message.content().startsWith("/join ")) {
+                    handleJoin(message);
                 } else {
-                    broadcastMessage(message);
+                    SessionManager.getInstance()
+                            .getRoom(roomId)
+                            .broadcast(message);
                 }
             }
         } catch (IOException | ClassNotFoundException e) {
@@ -82,6 +82,14 @@ public class Server_ClientHandler implements Callable<Void> {
             }
         }
         return null;
+    }
+
+    public void update(Message message) {
+        try {
+            sendMessage(message);
+        } catch (IOException e) {
+            SessionManager.getInstance().removeClientFromSession(roomId, this);
+        }
     }
 
 
