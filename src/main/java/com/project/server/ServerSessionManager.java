@@ -1,27 +1,25 @@
 package com.project.server;
 
-import com.project.utils.Room;
-
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
-public class SessionManager {
+public class ServerSessionManager {
 
-    private static final SessionManager INSTANCE = new SessionManager();
+    private static final ServerSessionManager INSTANCE = new ServerSessionManager();
 
     private final ConcurrentMap<String, Room> sessions;
 
-    private SessionManager() {
+    private ServerSessionManager() {
         sessions = new ConcurrentHashMap<>();
     }
 
-    public static SessionManager getInstance() {
+    public static ServerSessionManager getInstance() {
         return INSTANCE;
     }
 
-    public CopyOnWriteArrayList<Server_ClientHandler> getSessions(String roomID) {
+    public CopyOnWriteArrayList<ServerClientHandler> getSessions(String roomID) {
         Room room = sessions.get(roomID);
         if (room != null) {
             return room.getObservers();
@@ -42,13 +40,13 @@ public class SessionManager {
         sessions.remove(roomID);
     }
 
-    public boolean addClientToSession(String roomID, Server_ClientHandler client) {
+    public boolean addClientToSession(String roomID, ServerClientHandler client) {
         Room room = sessions.computeIfAbsent(roomID, k -> new Room(roomID));
         room.registerObserver(client);
         return true;
     }
 
-    public boolean removeClientFromSession(String roomID, Server_ClientHandler client) {
+    public boolean removeClientFromSession(String roomID, ServerClientHandler client) {
         Room room = sessions.get(roomID);
         if (room != null) {
             room.removeObserver(client);

@@ -4,19 +4,18 @@ import com.project.utils.Message;
 
 import java.io.*;
 import java.net.Socket;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CopyOnWriteArrayList;
 
-public class Server_ClientHandler implements Callable<Void> {
+public class ServerClientHandler implements Callable<Void> {
 
     private final Socket socket;
     private ObjectInputStream in;
     private ObjectOutputStream out;
     private String roomId;
 
-    public Server_ClientHandler(Socket socket) throws IOException {
+    public ServerClientHandler(Socket socket) throws IOException {
         this.socket = socket;
         this.out = new ObjectOutputStream(socket.getOutputStream());
         this.in = new ObjectInputStream(socket.getInputStream());
@@ -27,24 +26,9 @@ public class Server_ClientHandler implements Callable<Void> {
         out.flush();
     }
 
-    private void broadcastMessage(Message message) {
-        SessionManager sessionManager = SessionManager.getInstance();
-        CopyOnWriteArrayList<Server_ClientHandler> clients = sessionManager.getSessions(roomId);
-
-        for (Server_ClientHandler client : clients) {
-            try {
-                if (!client.equals(this)) {
-                    client.sendMessage(message);
-                }
-            } catch (IOException e) {
-                sessionManager.removeClientFromSession(roomId, client);
-            }
-        }
-    }
-
     private void handleJoin(Message message) throws IOException {
         String newRoomId = message.content().substring(6);
-        SessionManager sessionManager = SessionManager.getInstance();
+        ServerSessionManager sessionManager = ServerSessionManager.getInstance();
 
         if (!sessionManager.sessionExists(newRoomId)) {
             sessionManager.createSession(newRoomId);
@@ -64,7 +48,7 @@ public class Server_ClientHandler implements Callable<Void> {
                 if (roomId == null && message.content().startsWith("/join ")) {
                     handleJoin(message);
                 } else {
-                    SessionManager.getInstance()
+                    ServerSessionManager.getInstance()
                             .getRoom(roomId)
                             .broadcast(message);
                 }
@@ -73,7 +57,7 @@ public class Server_ClientHandler implements Callable<Void> {
             System.out.println("[SYSTEM]: " + e.getMessage());
         } finally {
             if (roomId != null) {
-                SessionManager.getInstance().removeClientFromSession(roomId, this);
+                ServerSessionManager.getInstance().removeClientFromSession(roomId, this);
             }
             try {
                 socket.close();
@@ -88,7 +72,7 @@ public class Server_ClientHandler implements Callable<Void> {
         try {
             sendMessage(message);
         } catch (IOException e) {
-            SessionManager.getInstance().removeClientFromSession(roomId, this);
+            ServerSessionManager.getInstance().removeClientFromSession(roomId, this);
         }
     }
 

@@ -1,22 +1,23 @@
-package com.project.utils;
+package com.project.server;
 
-import com.project.server.Server_ClientHandler;
+import com.project.utils.Message;
 
 import java.util.concurrent.CopyOnWriteArrayList;
 
 public class Room{
     private final String roomId;
-    private final CopyOnWriteArrayList<Server_ClientHandler> observers = new CopyOnWriteArrayList<>();
+    private final CopyOnWriteArrayList<ServerClientHandler> observers = new CopyOnWriteArrayList<>();
 
     public Room(String roomId) {
         this.roomId = roomId;
     }
 
-    public void registerObserver(Server_ClientHandler observer) {
+    public void registerObserver(ServerClientHandler observer) {
         observers.add(observer);
+        //System.out.println("Registered Observer: " + observer + " for " + roomId);
     }
 
-    public void removeObserver(Server_ClientHandler observer) {
+    public void removeObserver(ServerClientHandler observer) {
         observers.remove(observer);
     }
 
@@ -25,7 +26,7 @@ public class Room{
         observers.forEach(observer -> observer.update(message));
     }
 
-    public CopyOnWriteArrayList<Server_ClientHandler> getObservers() {
+    public CopyOnWriteArrayList<ServerClientHandler> getObservers() {
         return observers;
     }
 

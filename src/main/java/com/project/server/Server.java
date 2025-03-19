@@ -22,7 +22,7 @@ public class Server {
                 Socket socket = serverSocket.accept();
                 System.out.println("New connection from " + socket.getRemoteSocketAddress());
 
-                executor.submit(new Server_ClientHandler(socket));
+                executor.submit(new ServerClientHandler(socket));
             }
 
         } catch (IOException e) {
