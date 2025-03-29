@@ -114,26 +114,26 @@ public class StartScreenController {
     }
 
     public void test(ActionEvent actionEvent) throws IOException, InterruptedException {
-        Gson gson = new GsonBuilder()
-                .registerTypeAdapter(Post.class, new UserAdapter())
-                .create();
-        System.out.println("test worked!");
-        User user1 = new User(5, "Jan", "Rapowanie", "Janek123", "janek@gmail.com", LocalDate.now().toString(), "jr123!");
-        String jsonUser = gson.toJson(user1, User.class);
-        HttpClient client = HttpClient.newHttpClient();
+//        Gson gson = new GsonBuilder()
+//                .registerTypeAdapter(Post.class, new UserAdapter())
+//                .create();
+//        System.out.println("test worked!");
+//        User user1 = new User(5, "Jan", "Rapowanie", "Janek123", "janek@gmail.com", LocalDate.now().toString(), "jr123!");
+//        String jsonUser = gson.toJson(user1, User.class);
+//        HttpClient client = HttpClient.newHttpClient();
+////        HttpRequest request = HttpRequest.newBuilder()
+////                .uri(URI.create("http://localhost:8080/api/users"))
+////                .header("Content-Type", "application/json")
+////                .POST(HttpRequest.BodyPublishers.ofString(jsonUser))
+////                .build();
+//
 //        HttpRequest request = HttpRequest.newBuilder()
-//                .uri(URI.create("http://localhost:8080/api/users"))
+//                .uri(URI.create("http://localhost:8080/api/users?userId=" + 2))
 //                .header("Content-Type", "application/json")
-//                .POST(HttpRequest.BodyPublishers.ofString(jsonUser))
+//                .GET()
 //                .build();
-
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("http://localhost:8080/api/users?userId=" + 2))
-                .header("Content-Type", "application/json")
-                .GET()
-                .build();
-        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-        System.out.println(response);
-        System.out.println(response.body());
+//        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+//        System.out.println(response);
+//        System.out.println(response.body());
     }
 }
