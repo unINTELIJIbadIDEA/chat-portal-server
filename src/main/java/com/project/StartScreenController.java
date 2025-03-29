@@ -1,4 +1,9 @@
 package com.project;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.project.apiServer.Post;
+import com.project.apiServer.User;
+import com.project.apiServer.UserAdapter;
 import javafx.animation.ScaleTransition;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
@@ -18,6 +23,7 @@ import java.net.URL;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.time.LocalDate;
 
 public class StartScreenController {
 
@@ -108,15 +114,26 @@ public class StartScreenController {
     }
 
     public void test(ActionEvent actionEvent) throws IOException, InterruptedException {
+        Gson gson = new GsonBuilder()
+                .registerTypeAdapter(Post.class, new UserAdapter())
+                .create();
         System.out.println("test worked!");
+        User user1 = new User(5, "Jan", "Rapowanie", "Janek123", "janek@gmail.com", LocalDate.now().toString(), "jr123!");
+        String jsonUser = gson.toJson(user1, User.class);
         HttpClient client = HttpClient.newHttpClient();
+//        HttpRequest request = HttpRequest.newBuilder()
+//                .uri(URI.create("http://localhost:8080/api/users"))
+//                .header("Content-Type", "application/json")
+//                .POST(HttpRequest.BodyPublishers.ofString(jsonUser))
+//                .build();
+
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("http://localhost:8080/api/posts"))
+                .uri(URI.create("http://localhost:8080/api/users?userId=" + 2))
                 .header("Content-Type", "application/json")
                 .GET()
                 .build();
-
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
         System.out.println(response);
+        System.out.println(response.body());
     }
 }

@@ -2,7 +2,7 @@ package com.project.apiServer;
 
 public class User {
     private int id;
-    private String name, surname, nickname, email, dateOfBirth, password;
+    private String name, surname, nickname, email, birthday, password;
 
     public User(int id, String name, String surname, String nickname, String email, String dateOfBirth, String password) {
         this.id = id;
@@ -10,7 +10,7 @@ public class User {
         this.surname = surname;
         this.nickname = nickname;
         this.email = email;
-        this.dateOfBirth = dateOfBirth;
+        this.birthday = dateOfBirth;
         this.password = password;
     }
 
@@ -46,12 +46,12 @@ public class User {
         this.email = email;
     }
 
-    public String getDateOfBirth() {
-        return dateOfBirth;
+    public String getBirthday() {
+        return birthday;
     }
 
-    public void setDateOfBirth(String dateOfBirth) {
-        this.dateOfBirth = dateOfBirth;
+    public void setBirthday(String birthday) {
+        this.birthday = birthday;
     }
 
     public String getPassword() {

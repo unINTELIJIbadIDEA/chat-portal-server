@@ -8,5 +8,6 @@ module com.project {
 
 
     opens com.project to javafx.fxml;
+    opens com.project.apiServer to com.google.gson;
     exports com.project;
 }
