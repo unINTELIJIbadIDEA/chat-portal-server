@@ -1,5 +1,6 @@
 package com.project;
 import javafx.animation.ScaleTransition;
+import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
@@ -12,7 +13,11 @@ import javafx.util.Duration;
 
 
 import java.io.IOException;
+import java.net.URI;
 import java.net.URL;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 
 public class StartScreenController {
 
@@ -100,5 +105,18 @@ public class StartScreenController {
         scaleTransition.setToX(1.0);
         scaleTransition.setToY(1.0);
         scaleTransition.play();
+    }
+
+    public void test(ActionEvent actionEvent) throws IOException, InterruptedException {
+        System.out.println("test worked!");
+        HttpClient client = HttpClient.newHttpClient();
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("http://localhost:8080/api/posts"))
+                .header("Content-Type", "application/json")
+                .GET()
+                .build();
+
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+        System.out.println(response);
     }
 }
