@@ -1,4 +1,4 @@
-package com.project.apiServer;
+package com.project.models;
 
 public class User {
     private int id;

@@ -1,10 +1,6 @@
 package com.project.apiServer;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.google.gson.TypeAdapter;
-import com.google.gson.stream.JsonReader;
-import com.google.gson.stream.JsonWriter;
+import com.project.models.Post;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 
@@ -18,13 +14,9 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static com.project.apiServer.ApiServer.*;
+
 public class PostsHandler implements HttpHandler {
-    private static final String dbURL = "jdbc:mysql://localhost:3306/portal";
-    private static final String dbUsername = "root";
-    private static final String dbPassword = "";
-    private static final Gson gson = new GsonBuilder()
-            .registerTypeAdapter(Post.class, new PostAdapter())
-            .create();
 
     @Override
     public void handle(HttpExchange exchange) throws IOException {
@@ -164,21 +156,3 @@ public class PostsHandler implements HttpHandler {
     }
 }
 
-class PostAdapter extends TypeAdapter<Post> {
-    @Override
-    public void write(JsonWriter out, Post post) throws IOException {
-        out.beginObject();
-        out.name("postId").value(post.getPostId());
-        out.name("userId").value(post.getUserId());
-        out.name("name").value(post.getName());
-        out.name("surname").value(post.getSurname());
-        out.name("content").value(post.getContent());
-        out.name("date").value(post.getDate());
-        out.endObject();
-    }
-
-    @Override
-    public Post read(JsonReader in) throws IOException {
-        return new Gson().fromJson(in, Post.class);
-    }
-}

@@ -2,6 +2,8 @@ package com.project.apiServer;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.project.models.Post;
+import com.project.models.User;
 
 import java.sql.*;
 import java.util.ArrayList;

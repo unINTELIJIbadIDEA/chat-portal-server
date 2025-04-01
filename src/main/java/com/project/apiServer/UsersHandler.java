@@ -1,7 +1,6 @@
 package com.project.apiServer;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
+import com.project.models.User;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 
@@ -9,27 +8,19 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
-import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
-import java.util.Arrays;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static com.project.apiServer.ApiServer.*;
+
 public class UsersHandler implements HttpHandler {
-    private static final String dbURL = "jdbc:mysql://localhost:3306/portal";
-    private static final String dbUsername = "root";
-    private static final String dbPassword = "";
-    private static final Gson gson = new GsonBuilder()
-            .registerTypeAdapter(Post.class, new UserAdapter())
-            .create();
 
     @Override
     public void handle(HttpExchange exchange) {
         String method = exchange.getRequestMethod();
-        System.out.println(method);
         try {
             if (method.equalsIgnoreCase("POST")) {
                 handlePostRequest(exchange);

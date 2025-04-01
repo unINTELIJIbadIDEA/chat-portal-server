@@ -1,9 +1,4 @@
 package com.project;
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.project.apiServer.Post;
-import com.project.apiServer.User;
-import com.project.apiServer.UserAdapter;
 import javafx.animation.ScaleTransition;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
@@ -12,18 +7,12 @@ import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.AnchorPane;
-import javafx.scene.layout.Pane;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 
 
 import java.io.IOException;
-import java.net.URI;
 import java.net.URL;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.time.LocalDate;
 
 public class StartScreenController {
 

@@ -1,4 +1,4 @@
-package com.project.apiServer;
+package com.project.models;
 
 public class Post {
     //userId is an id of owner of the post
