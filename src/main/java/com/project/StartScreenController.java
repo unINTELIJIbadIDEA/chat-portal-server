@@ -1,12 +1,12 @@
 package com.project;
 import javafx.animation.ScaleTransition;
+import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.AnchorPane;
-import javafx.scene.layout.Pane;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 
@@ -100,5 +100,29 @@ public class StartScreenController {
         scaleTransition.setToX(1.0);
         scaleTransition.setToY(1.0);
         scaleTransition.play();
+    }
+
+    public void test(ActionEvent actionEvent) throws IOException, InterruptedException {
+//        Gson gson = new GsonBuilder()
+//                .registerTypeAdapter(Post.class, new UserAdapter())
+//                .create();
+//        System.out.println("test worked!");
+//        User user1 = new User(5, "Jan", "Rapowanie", "Janek123", "janek@gmail.com", LocalDate.now().toString(), "jr123!");
+//        String jsonUser = gson.toJson(user1, User.class);
+//        HttpClient client = HttpClient.newHttpClient();
+////        HttpRequest request = HttpRequest.newBuilder()
+////                .uri(URI.create("http://localhost:8080/api/users"))
+////                .header("Content-Type", "application/json")
+////                .POST(HttpRequest.BodyPublishers.ofString(jsonUser))
+////                .build();
+//
+//        HttpRequest request = HttpRequest.newBuilder()
+//                .uri(URI.create("http://localhost:8080/api/users?userId=" + 2))
+//                .header("Content-Type", "application/json")
+//                .GET()
+//                .build();
+//        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+//        System.out.println(response);
+//        System.out.println(response.body());
     }
 }
