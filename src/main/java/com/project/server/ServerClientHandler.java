@@ -1,12 +1,11 @@
 package com.project.server;
 
-import com.project.utils.Message;
+import com.project.models.Message;
 
 import java.io.*;
 import java.net.Socket;
 import java.time.LocalDateTime;
 import java.util.concurrent.Callable;
-import java.util.concurrent.CopyOnWriteArrayList;
 
 public class ServerClientHandler implements Callable<Void> {
 

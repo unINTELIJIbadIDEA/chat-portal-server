@@ -1,5 +1,7 @@
 package com.project.server;
 
+import com.project.utils.Config;
+
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -16,7 +18,7 @@ public class Server {
 
     public void runServer(){
 
-        try (ServerSocket serverSocket = new ServerSocket(ServerProperties.PORT)) {
+        try (ServerSocket serverSocket = new ServerSocket(Config.getPORT_SERVER())) {
 
             while (true) {
                 Socket socket = serverSocket.accept();
