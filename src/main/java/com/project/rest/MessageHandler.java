@@ -2,8 +2,8 @@ package com.project.rest;
 
 import com.google.gson.*;
 import com.project.adapters.LocalDateTimeAdapter;
-import com.project.models.Message;
-import com.project.models.MessageRequest;
+import com.project.models.message.Message;
+import com.project.models.message.MessageRequest;
 import com.project.server.ApiServer;
 import com.project.services.MessageService;
 import com.sun.net.httpserver.HttpExchange;

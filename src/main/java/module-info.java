@@ -19,4 +19,5 @@ module com.project {
     opens com.project.controllers to javafx.fxml;
     exports com.project.utils;
     opens com.project.utils to javafx.fxml;
+    opens com.project.models.message to com.google.gson;
 }

@@ -1,5 +1,6 @@
 package com.project.models;
 
+import com.project.models.message.Message;
 import com.project.server.ServerClientHandler;
 
 import java.util.concurrent.CopyOnWriteArrayList;

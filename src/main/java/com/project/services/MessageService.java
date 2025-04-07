@@ -1,7 +1,7 @@
 package com.project.services;
 
 import com.project.dao.MessageDAO;
-import com.project.models.Message;
+import com.project.models.message.Message;
 import com.project.utils.Config;
 
 import java.sql.SQLException;

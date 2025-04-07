@@ -3,7 +3,7 @@ package com.project.dao;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.project.adapters.MessageAdapter;
-import com.project.models.Message;
+import com.project.models.message.Message;
 
 import java.sql.*;
 import java.util.ArrayList;

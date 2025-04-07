@@ -1,4 +1,4 @@
-package com.project.models;
+package com.project.models.message;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;

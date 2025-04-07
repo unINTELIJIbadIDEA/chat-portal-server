@@ -1,10 +1,9 @@
 package com.project.adapters;
 
-import com.google.gson.Gson;
 import com.google.gson.TypeAdapter;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
-import com.project.models.Message;
+import com.project.models.message.Message;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
