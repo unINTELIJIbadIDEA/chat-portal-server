@@ -3,6 +3,7 @@ package com.project.rest;
 import com.google.gson.*;
 import com.project.adapters.LocalDateTimeAdapter;
 import com.project.models.Message;
+import com.project.models.MessageRequest;
 import com.project.server.ApiServer;
 import com.project.services.MessageService;
 import com.sun.net.httpserver.HttpExchange;
@@ -124,18 +125,12 @@ public class MessageHandler implements HttpHandler {
 
 
         exchange.getResponseHeaders().set("Content-Type", "application/json; charset=UTF-8");
-
         InputStreamReader reader = new InputStreamReader(exchange.getRequestBody(), StandardCharsets.UTF_8);
 
         try {
-            Message message = gson.fromJson(reader, Message.class);
+            MessageRequest messageRequest = gson.fromJson(reader, MessageRequest.class);
 
-            if (message.sender_id() != userId) {
-                sendResponse(exchange, 403, "Cannot post as a different user");
-                return;
-            }
-
-            if (message.content() == null || message.content().trim().isEmpty()) {
+            if (messageRequest.content() == null || messageRequest.content().trim().isEmpty()) {
                 String response = "{\"error\": \"Message content cannot be empty\"}";
                 exchange.sendResponseHeaders(400, response.getBytes(StandardCharsets.UTF_8).length);
                 try (OutputStream os = exchange.getResponseBody()) {
@@ -144,7 +139,16 @@ public class MessageHandler implements HttpHandler {
                 return;
             }
 
+            Message message = new Message(
+                    0,
+                    messageRequest.chat_id(),
+                    userId,
+                    messageRequest.content(),
+                    java.time.LocalDateTime.now()
+            );
+
             boolean added = messageService.addMessage(message);
+
             if (!added) {
                 String response = "{\"error\": \"Failed to add message\"}";
                 exchange.sendResponseHeaders(500, response.getBytes(StandardCharsets.UTF_8).length);

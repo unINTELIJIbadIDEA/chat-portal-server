@@ -17,7 +17,6 @@ public class MessageService {
 
     public boolean addMessage(Message newMessage) throws SQLException {
 
-        System.out.println("test");
 
         if (newMessage.content() == null || newMessage.content().trim().isEmpty()) {
             return false;
