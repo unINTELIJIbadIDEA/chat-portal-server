@@ -23,13 +23,21 @@ public class ApiServer {
     private static final int PORT = Config.getPORT_API();
 
     //jeszcze nieużywane, jest bardzo dużo teorii żeby to wszystko ogarnać. Ale dam radę
-    private static final TokenManager tokenManager = new TokenManager(Config.getSecretKey(), Config.getExpirationTime());
+    static final TokenManager tokenManager = new TokenManager(Config.getSecretKey(), Config.getExpirationTime());
+
 
 
     //do tego mam pytanie czemu do Post.class jest user adapter?
     public static final Gson gson = new GsonBuilder()
             .registerTypeAdapter(Post.class, new UserAdapter())
             .create();
+
+    public static final TokenManager getTokenManager() {
+        return tokenManager;
+    }
+
+
+
 
     public static void main(String[] args) throws InterruptedException {
         try {

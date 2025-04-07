@@ -3,6 +3,7 @@ package com.project.rest;
 import com.google.gson.*;
 import com.project.adapters.LocalDateTimeAdapter;
 import com.project.models.Message;
+import com.project.server.ApiServer;
 import com.project.services.MessageService;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
@@ -13,7 +14,6 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -78,6 +78,7 @@ public class MessageHandler implements HttpHandler {
 
 
     private void handleGetMessages(HttpExchange exchange) throws IOException {
+
         String query = exchange.getRequestURI().getQuery();
         String chatId = null;
         if (query != null && query.startsWith("chatId=")) {
@@ -93,13 +94,15 @@ public class MessageHandler implements HttpHandler {
             String response = gson.toJson(messages);
             sendResponse(exchange, 200, response);
         } catch (SQLException e) {
-            e.printStackTrace();
+            System.out.println(e.getMessage());
             sendResponse(exchange, 500, "Error fetching messages");
         }
     }
 
 
     private void handleGetMessageById(HttpExchange exchange, int id) throws IOException {
+
+
         try {
             String message = messageService.getMessageById(id);
             if (message != null) {
@@ -108,18 +111,29 @@ public class MessageHandler implements HttpHandler {
                 sendResponse(exchange, 404, "Message not found");
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            System.out.println(e.getMessage());
             sendResponse(exchange, 500, "Error fetching message");
         }
     }
 
     public void handleAddMessage(HttpExchange exchange) throws IOException {
+
+        Integer userId = authenticate(exchange);
+        if (userId == null)
+            return;
+
+
         exchange.getResponseHeaders().set("Content-Type", "application/json; charset=UTF-8");
 
         InputStreamReader reader = new InputStreamReader(exchange.getRequestBody(), StandardCharsets.UTF_8);
 
         try {
             Message message = gson.fromJson(reader, Message.class);
+
+            if (message.sender_id() != userId) {
+                sendResponse(exchange, 403, "Cannot post as a different user");
+                return;
+            }
 
             if (message.content() == null || message.content().trim().isEmpty()) {
                 String response = "{\"error\": \"Message content cannot be empty\"}";
@@ -156,8 +170,19 @@ public class MessageHandler implements HttpHandler {
     }
 
     private void handleUpdateMessage(HttpExchange exchange, int id) throws IOException {
+
+        Integer userId = authenticate(exchange);
+        if (userId == null)
+            return;
+
         String requestBody = readRequestBody(exchange);
         Message receivedMessage = gson.fromJson(requestBody, Message.class);
+
+        if (receivedMessage.sender_id() != userId) {
+            sendResponse(exchange, 403, "Cannot post as a different user");
+            return;
+        }
+
         Message updatedMessage = new Message(
                 id,
                 receivedMessage.chat_id(),
@@ -173,25 +198,46 @@ public class MessageHandler implements HttpHandler {
                 sendResponse(exchange, 500, "Failed to update message");
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            System.out.println(e.getMessage());
             sendResponse(exchange, 500, "Error updating message");
         }
     }
 
 
     private void handleDeleteMessage(HttpExchange exchange, int id) throws IOException {
+        Integer userId = authenticate(exchange);
+        if (userId == null) return;
+
         try {
+            List<Message> allMessages = messageService.getAllMessages();
+            Message messageToDelete = allMessages.stream()
+                    .filter(m -> m.message_id() == id)
+                    .findFirst()
+                    .orElse(null);
+
+            if (messageToDelete == null) {
+                sendResponse(exchange, 404, "Message not found");
+                return;
+            }
+
+            if (messageToDelete.sender_id() != userId) {
+                sendResponse(exchange, 403, "You are not allowed to delete this message");
+                return;
+            }
+
             boolean isDeleted = messageService.deleteMessage(id);
             if (isDeleted) {
                 sendResponse(exchange, 200, "Message deleted successfully");
             } else {
                 sendResponse(exchange, 500, "Failed to delete message");
             }
+
         } catch (SQLException e) {
-            e.printStackTrace();
+            System.out.println(e.getMessage());
             sendResponse(exchange, 500, "Error deleting message");
         }
     }
+
 
     private String readRequestBody(HttpExchange exchange) throws IOException {
         try (BufferedReader reader = new BufferedReader(
@@ -207,4 +253,21 @@ public class MessageHandler implements HttpHandler {
             os.write(responseBytes);
         }
     }
+
+    private Integer authenticate(HttpExchange exchange) throws IOException {
+        String authHeader = exchange.getRequestHeaders().getFirst("Authorization");
+
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            sendResponse(exchange, 401, "Missing or invalid Authorization header");
+            return null;
+        }
+
+        String token = authHeader.substring(7);
+        Integer userId = ApiServer.getTokenManager().validateTokenAndGetUserId(token);
+        if (userId == null) {
+            sendResponse(exchange, 401, "Invalid or expired token");
+        }
+        return userId;
+    }
+
 }
