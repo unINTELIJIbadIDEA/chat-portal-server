@@ -28,8 +28,8 @@ public class UsersDAO {
 
     public boolean addUser(User newUser) {
         String query = "INSERT INTO user (name, surname, nickname, email, birthday, password) VALUES (?, ?, ?, ?, ?, ?)";
-        try {
-            PreparedStatement statement = connection.prepareStatement(query);
+        try (PreparedStatement statement = connection.prepareStatement(query)){
+
             statement.setString(1, newUser.getName());
             statement.setString(2, newUser.getSurname());
             statement.setString(3, newUser.getNickname());
@@ -46,8 +46,7 @@ public class UsersDAO {
 
     public String getUserWithId(int userId) {
         String query = "SELECT * FROM user WHERE userId = ?";
-        try {
-            PreparedStatement statement = connection.prepareStatement(query);
+        try (PreparedStatement statement = connection.prepareStatement(query)){;
             statement.setInt(1, userId);
 
             ResultSet resultSet = statement.executeQuery();
@@ -70,6 +69,27 @@ public class UsersDAO {
             System.out.println(e.getMessage());
             return "";
         }
-
     }
+
+    public User getUserByEmail(String email) throws SQLException {
+        String query = "SELECT * FROM user WHERE email = ?";
+        try (PreparedStatement ps = connection.prepareStatement(query)) {
+            ps.setString(1, email);
+            ResultSet rs = ps.executeQuery();
+
+            if (rs.next()) {
+                int userId = rs.getInt("userId");
+                String name = rs.getString("name");
+                String surname = rs.getString("surname");
+                String nickname = rs.getString("nickname");
+                String emailFromDb = rs.getString("email");
+                String password = rs.getString("password");
+                String birthday = rs.getString("birthday");
+
+                return new User(userId, name, surname, nickname, emailFromDb, birthday, password);
+            }
+        }
+        return null;
+    }
+
 }

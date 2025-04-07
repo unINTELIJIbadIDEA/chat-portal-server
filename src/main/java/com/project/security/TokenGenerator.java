@@ -9,6 +9,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.Key;
 import java.util.Date;
 
+@Deprecated
 public class TokenGenerator {
 
     public static String generateToken(int userId, String secretKey, long expirationMillis) {
