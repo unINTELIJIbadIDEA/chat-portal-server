@@ -2,6 +2,9 @@ package com.project.server;
 
 import com.project.models.message.ClientMessage;
 import com.project.models.message.Message;
+import com.project.models.message.MessageRequest;
+import com.project.utils.Config;
+
 import java.io.*;
 import java.net.Socket;
 import java.time.LocalDateTime;
@@ -78,6 +81,8 @@ public class ServerClientHandler implements Callable<Void> {
                     ServerSessionManager.getInstance()
                             .getRoom(clientMessage.chatId())
                             .broadcast(messageToSend);
+
+                    sendMessageToApi(clientMessage.token(), messageToSend);
                 } else {
                     sendMessage(new Message(0, clientMessage.chatId(), userId, "Room does not exist. Please join first.", LocalDateTime.now()));
                 }
@@ -102,6 +107,31 @@ public class ServerClientHandler implements Callable<Void> {
             sendMessage(message);
         } catch (IOException e) {
             ServerSessionManager.getInstance().removeClientFromSession(roomId, this);
+        }
+    }
+
+    private void sendMessageToApi(String token, Message message) {
+        try {
+            java.net.URL url = new java.net.URL("http://localhost:" + Config.getPORT_API() + "/api/messages");
+            java.net.HttpURLConnection conn = (java.net.HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("POST");
+            conn.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
+            conn.setRequestProperty("Authorization", "Bearer " + token);
+            conn.setDoOutput(true);
+
+            String json = ApiServer.gson.toJson(new MessageRequest(message.chat_id(), message.content()));
+
+            try (OutputStream os = conn.getOutputStream()) {
+                byte[] input = json.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+                os.write(input, 0, input.length);
+            }
+
+            int responseCode = conn.getResponseCode();
+            if (responseCode != 201) {
+                System.out.println("[API ERROR] Failed to POST message, response code: " + responseCode);
+            }
+        } catch (IOException e) {
+            System.out.println("[API ERROR] " + e.getMessage());
         }
     }
 }
