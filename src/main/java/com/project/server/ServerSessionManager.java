@@ -1,5 +1,6 @@
 package com.project.server;
 
+import com.project.models.Conversation;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -9,7 +10,7 @@ public class ServerSessionManager {
 
     private static final ServerSessionManager INSTANCE = new ServerSessionManager();
 
-    private final ConcurrentMap<String, Room> sessions;
+    private final ConcurrentMap<String, Conversation> sessions;
 
     private ServerSessionManager() {
         sessions = new ConcurrentHashMap<>();
@@ -20,7 +21,7 @@ public class ServerSessionManager {
     }
 
     public CopyOnWriteArrayList<ServerClientHandler> getSessions(String roomID) {
-        Room room = sessions.get(roomID);
+        Conversation room = sessions.get(roomID);
         if (room != null) {
             return room.getObservers();
         }
@@ -32,7 +33,7 @@ public class ServerSessionManager {
     }
 
     public String createSession(String roomID) {
-        sessions.putIfAbsent(roomID, new Room(roomID));
+        sessions.putIfAbsent(roomID, new Conversation(roomID));
         return roomID;
     }
 
@@ -41,13 +42,13 @@ public class ServerSessionManager {
     }
 
     public boolean addClientToSession(String roomID, ServerClientHandler client) {
-        Room room = sessions.computeIfAbsent(roomID, k -> new Room(roomID));
+        Conversation room = sessions.computeIfAbsent(roomID, k -> new Conversation(roomID));
         room.registerObserver(client);
         return true;
     }
 
     public boolean removeClientFromSession(String roomID, ServerClientHandler client) {
-        Room room = sessions.get(roomID);
+        Conversation room = sessions.get(roomID);
         if (room != null) {
             room.removeObserver(client);
             if (room.getObserverCount() == 0) {
@@ -63,11 +64,11 @@ public class ServerSessionManager {
     }
 
     public int getSessionSize(String roomID) {
-        Room room = sessions.get(roomID);
+        Conversation room = sessions.get(roomID);
         return (room != null) ? room.getObserverCount() : 0;
     }
 
-    public Room getRoom(String roomId) {
+    public Conversation getRoom(String roomId) {
         return sessions.get(roomId);
     }
 }

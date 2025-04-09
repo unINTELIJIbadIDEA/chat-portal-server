@@ -1,5 +1,8 @@
-package com.project.apiServer;
+package com.project.rest;
 
+//import com.project.dao.DatabaseConnection;
+import com.project.utils.Config;
+import com.project.dao.UsersDAO;
 import com.project.models.User;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
@@ -14,7 +17,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static com.project.apiServer.ApiServer.*;
+import static com.project.server.ApiServer.*;
 
 public class UsersHandler implements HttpHandler {
 
@@ -37,16 +40,16 @@ public class UsersHandler implements HttpHandler {
         Map<String, String> queryParams = getQueryParams(exchange.getRequestURI().getQuery());
         String userId = queryParams.get("userId");
         if (userId != null) {
-            DatabaseConnection dbcon = new DatabaseConnection(dbURL, dbUsername, dbPassword);
-            dbcon.connect();
-            String user = dbcon.getUserWithId(Integer.parseInt(userId));
+            UsersDAO dao = new UsersDAO(Config.getDbUrl(), Config.getDbUsername(), Config.getDbPassword());
+            dao.connect();
+            String user = dao.getUserWithId(Integer.parseInt(userId));
             if (user.isEmpty()) {
                 sendResponse(exchange, 500, "Failed to find user with specific id");
             } else {
                 sendResponse(exchange, 200, user);
             }
 
-            dbcon.close();
+            dao.close();
         }
 
     }
@@ -69,9 +72,9 @@ public class UsersHandler implements HttpHandler {
         User newUser = gson.fromJson(requestBody, User.class);
 
 
-        DatabaseConnection dbcon = new DatabaseConnection(dbURL, dbUsername, dbPassword);
-        dbcon.connect();
-        boolean isAdded = dbcon.addUser(newUser);
+        UsersDAO dao = new UsersDAO(Config.getDbUrl(), Config.getDbUsername(), Config.getDbPassword());
+        dao.connect();
+        boolean isAdded = dao.addUser(newUser);
 
         if (isAdded) {
             sendResponse(exchange, 201, "User added successfully");
@@ -79,7 +82,7 @@ public class UsersHandler implements HttpHandler {
             sendResponse(exchange, 500, "Failed to add user");
         }
 
-        dbcon.close();
+        dao.close();
         reader.close();
     }
 

@@ -1,5 +1,7 @@
-package com.project.apiServer;
+package com.project.rest;
 
+import com.project.utils.Config;
+import com.project.dao.PostsDAO;
 import com.project.models.Post;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
@@ -14,7 +16,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static com.project.apiServer.ApiServer.*;
+import static com.project.server.ApiServer.*;
 
 public class PostsHandler implements HttpHandler {
 
@@ -60,10 +62,10 @@ public class PostsHandler implements HttpHandler {
 
         Post newPost = gson.fromJson(requestBody, Post.class);
 
-        DatabaseConnection dbcon = new DatabaseConnection(dbURL, dbUsername, dbPassword);
-        dbcon.connect();
+        PostsDAO dao = new PostsDAO(Config.getDbUrl(), Config.getDbUsername(), Config.getDbPassword());
+        dao.connect();
 
-        boolean isUpdated = dbcon.updatePost(newPost);
+        boolean isUpdated = dao.updatePost(newPost);
 
         if (isUpdated) {
             sendResponse(exchange, 200, "Post updated successfully");
@@ -78,9 +80,9 @@ public class PostsHandler implements HttpHandler {
         if (postId == null) {
             throw new IllegalArgumentException("Brak argumentu w zapytaniu!");
         }
-        DatabaseConnection dbcon = new DatabaseConnection(dbURL, dbUsername, dbPassword);
-        dbcon.connect();
-        boolean isDeleted = dbcon.deletePostWithId(Integer.parseInt(postId));
+        PostsDAO dao = new PostsDAO(Config.getDbUrl(), Config.getDbUsername(), Config.getDbPassword());
+        dao.connect();
+        boolean isDeleted = dao.deletePostWithId(Integer.parseInt(postId));
 
         if (!isDeleted) {
             throw new SQLException("Nie udało się usunąć");
@@ -94,10 +96,10 @@ public class PostsHandler implements HttpHandler {
         String requestBody = bufferedReader.lines().collect(Collectors.joining("\n"));
 
         Post newPost = gson.fromJson(requestBody, Post.class);
-        DatabaseConnection dbcon = new DatabaseConnection(dbURL, dbUsername, dbPassword);
-        dbcon.connect();
+        PostsDAO dao = new PostsDAO(Config.getDbUrl(), Config.getDbUsername(), Config.getDbPassword());
+        dao.connect();
 
-        boolean isAdded = dbcon.addPost(newPost);
+        boolean isAdded = dao.addPost(newPost);
 
         if (isAdded) {
             sendResponse(exchange, 201, "Post added successfully");
@@ -118,14 +120,14 @@ public class PostsHandler implements HttpHandler {
     }
 
     private void getPostsExcludingId(HttpExchange exchange, int excludeId) throws SQLException, IOException, InterruptedException {
-        DatabaseConnection dbcon = new DatabaseConnection(dbURL, dbUsername, dbPassword);
-        dbcon.connect();
+        PostsDAO dao = new PostsDAO(Config.getDbUrl(), Config.getDbUsername(), Config.getDbPassword());
+        dao.connect();
 
-        String responseContent = dbcon.getAllPostsExcludingId(excludeId);
+        String responseContent = dao.getAllPostsExcludingId(excludeId);
         System.out.println("resp con:" + responseContent);
         sendResponse(exchange, 200, responseContent);
         System.out.println("z bazy: " + responseContent);
-        dbcon.close();
+        dao.close();
     }
 
     private Map<String, String> getQueryParams(String query) {
@@ -139,13 +141,13 @@ public class PostsHandler implements HttpHandler {
     }
 
     private void getAllPosts(HttpExchange exchange) throws SQLException, IOException {
-        DatabaseConnection dbcon = new DatabaseConnection(dbURL, dbUsername, dbPassword);
-        dbcon.connect();
-        String responseContent = dbcon.getAllPosts();
+        PostsDAO dao = new PostsDAO(Config.getDbUrl(), Config.getDbUsername(), Config.getDbPassword());
+        dao.connect();
+        String responseContent = dao.getAllPosts();
 
         sendResponse(exchange, 200, responseContent);
         System.out.println("z bazy: " + responseContent);
-        dbcon.close();
+        dao.close();
     }
 
     private void sendResponse(HttpExchange exchange, int statusCode, String responseContent) throws IOException {
