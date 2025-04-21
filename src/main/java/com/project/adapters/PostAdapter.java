@@ -1,4 +1,4 @@
-package com.project.apiServer;
+package com.project.adapters;
 
 import com.google.gson.Gson;
 import com.google.gson.TypeAdapter;

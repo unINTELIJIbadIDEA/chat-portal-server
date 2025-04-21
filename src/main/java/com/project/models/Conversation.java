@@ -1,14 +1,15 @@
-package com.project.server;
+package com.project.models;
 
-import com.project.utils.Message;
+import com.project.models.message.Message;
+import com.project.server.ServerClientHandler;
 
 import java.util.concurrent.CopyOnWriteArrayList;
 
-public class Room{
+public class Conversation {
     private final String roomId;
     private final CopyOnWriteArrayList<ServerClientHandler> observers = new CopyOnWriteArrayList<>();
 
-    public Room(String roomId) {
+    public Conversation(String roomId) {
         this.roomId = roomId;
     }
 

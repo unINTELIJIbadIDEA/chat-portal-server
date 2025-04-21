@@ -1,7 +1,8 @@
-package com.project.apiServer;
+package com.project.dao;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.project.adapters.PostAdapter;
 import com.project.models.Post;
 import com.project.models.User;
 
@@ -9,13 +10,15 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
+@Deprecated
 public class DatabaseConnection {
+
     private final String dbURL;
     private final String dbName;
     private final String dbPassword;
     private Connection connection;
 
-    DatabaseConnection(String dbURL, String dbName, String dbPassword) {
+    public DatabaseConnection(String dbURL, String dbName, String dbPassword) {
         this.dbURL = dbURL;
         this.dbName = dbName;
         this.dbPassword = dbPassword;
