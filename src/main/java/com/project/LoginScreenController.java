@@ -39,7 +39,18 @@ public class LoginScreenController {
     @FXML
     private void handleLoginAction() {
         System.out.println("Zalogowano!");
-        // Dodaj logikę logowania (np. sprawdzenie danych logowania)
+        try {
+            URL resource = HelloApplication.class.getResource("textwelcome.fxml");
+            FXMLLoader fxmlLoader = new FXMLLoader(resource);
+            AnchorPane textwelcome = fxmlLoader.load();
+            Stage stage = (Stage) loginButton.getScene().getWindow();
+            stage.setScene(new Scene(textwelcome));
+            stage.setMaximized(true);
+            stage.show();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
     }
 
     // Akcja dla przycisku "Powrót"
