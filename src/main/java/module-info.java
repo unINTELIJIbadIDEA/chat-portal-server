@@ -6,6 +6,7 @@ module com.project {
     requires java.sql;
     requires java.net.http;
     requires jjwt.api;
+    requires java.desktop;
 
 
     opens com.project to javafx.fxml;
