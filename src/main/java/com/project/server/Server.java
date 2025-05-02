@@ -24,7 +24,7 @@ public class Server {
                 executor.submit(new ServerClientHandler(socket));
             }
         } catch (IOException e) {
-            throw new RuntimeException("[SERVER]: Error accepting connections: " + e.getMessage());
+            System.out.println("[SERVER]: Error accepting connections: " + e.getMessage());
         }
     }
 
