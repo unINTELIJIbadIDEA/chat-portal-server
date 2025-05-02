@@ -112,7 +112,7 @@ public class ServerClientHandler implements Callable<Void> {
 
     private void sendMessageToApi(String token, Message message) {
         try {
-            java.net.URL url = new java.net.URL("http://" + Config.getHOST_SERVER() + ":" + Config.getPORT_API() + "/api/messages");
+            java.net.URL url = new java.net.URL("http://" + Config.getHOST_SERVER() + ":" + Config.getLOCAL_API_PORT() + "/api/messages");
             java.net.HttpURLConnection conn = (java.net.HttpURLConnection) url.openConnection();
             conn.setRequestMethod("POST");
             conn.setRequestProperty("Content-Type", "application/json; charset=UTF-8");

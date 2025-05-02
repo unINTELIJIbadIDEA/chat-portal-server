@@ -19,7 +19,7 @@ public class Server {
 
     public void runServer() {
         try {
-            serverSocket = new ServerSocket(Config.getPORT_SERVER());
+            serverSocket = new ServerSocket(Config.getLOCAL_SERVER_PORT());
             System.out.println("[SERVER]: Server started, waiting for clients...");
             while (running) {
                 try {

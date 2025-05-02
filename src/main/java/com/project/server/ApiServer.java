@@ -22,7 +22,7 @@ public class ApiServer {
     private static final String messagePath = "/api/messages";
     private static final String authenticationPath = "/api/login";
 
-    private static final int PORT = Config.getPORT_API();
+    private static final int PORT = Config.getLOCAL_API_PORT();
 
     private HttpServer server;
 

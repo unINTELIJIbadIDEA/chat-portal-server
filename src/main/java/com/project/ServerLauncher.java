@@ -2,6 +2,8 @@ package com.project;
 
 import com.project.server.ApiServer;
 import com.project.server.Server;
+import com.project.utils.Config;
+import com.project.utils.SshTunnel;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -18,6 +20,9 @@ public class ServerLauncher {
         Server tcpServer = new Server();
         ApiServer apiServer = new ApiServer();
 
+        SshTunnel tcpTunnel = new SshTunnel(Config.getREMOTE_SERVER_PORT(),Config.getLOCAL_SERVER_PORT());
+        SshTunnel apiTunnel = new SshTunnel(Config.getREMOTE_API_PORT(),Config.getLOCAL_API_PORT());
+
         executor.submit(() -> {
             Thread.currentThread().setName("TCP-Server-Thread");
             try {
@@ -26,7 +31,6 @@ public class ServerLauncher {
                 System.err.println("TCP Server crashed: " + e.getMessage());
             }
         });
-
         executor.submit(() -> {
             Thread.currentThread().setName("API-Server-Thread");
             try {
@@ -36,6 +40,9 @@ public class ServerLauncher {
             }
         });
 
+        apiTunnel.openTunnel();
+        tcpTunnel.openTunnel();
+
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             System.out.println("Zamykanie serwerów...");
 
@@ -43,22 +50,14 @@ public class ServerLauncher {
                 tcpServer.stopServer();
                 apiServer.stopServer();
             } catch (Exception e) {
-                System.err.println("Błąd przy zamykaniu serwerów: " + e.getMessage());
-                e.printStackTrace();
+                System.out.println("Błąd przy zamykaniu serwerów: " + e.getMessage());
             }
 
             executor.shutdown();
-            try {
-                if (!executor.awaitTermination(5, TimeUnit.SECONDS)) {
-                    System.out.println("Wymuszone zatrzymanie wątków...");
-                    executor.shutdownNow();
-                }
-            } catch (InterruptedException e) {
-                executor.shutdownNow();
-                Thread.currentThread().interrupt();
-            }
-
             System.out.println("Serwery zamknięte.");
+
+            apiTunnel.closeTunnel();
+            tcpTunnel.closeTunnel();
         }));
     }
 }
