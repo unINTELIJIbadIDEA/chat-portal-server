@@ -7,7 +7,6 @@ import com.project.utils.SshTunnel;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 
 public class ServerLauncher {
     public static void main(String[] args) {
@@ -17,11 +16,11 @@ public class ServerLauncher {
             return thread;
         });
 
-        Server tcpServer = new Server();
-        ApiServer apiServer = new ApiServer();
+        var tcpServer = new Server();
+        var apiServer = new ApiServer();
 
-        SshTunnel tcpTunnel = new SshTunnel(Config.getREMOTE_SERVER_PORT(),Config.getLOCAL_SERVER_PORT());
-        SshTunnel apiTunnel = new SshTunnel(Config.getREMOTE_API_PORT(),Config.getLOCAL_API_PORT());
+        var tcpTunnel = new SshTunnel(Config.getREMOTE_SERVER_PORT(),Config.getLOCAL_SERVER_PORT());
+        var apiTunnel = new SshTunnel(Config.getREMOTE_API_PORT(),Config.getLOCAL_API_PORT());
 
         executor.submit(() -> {
             Thread.currentThread().setName("TCP-Server-Thread");
