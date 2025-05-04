@@ -47,7 +47,7 @@ public class AuthorizationHandler implements HttpHandler {
         try {
             String token = authorizationService.authenticateUser(email, password);
             if (token != null) {
-                sendResponse(exchange, 200, "{ \"token\": \"Bearer " + token + "\" }");
+                sendResponse(exchange, 200, "{ \"token\": \"" + token + "\" }");
             } else {
                 sendResponse(exchange, 401, "Invalid email or password");
             }

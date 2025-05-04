@@ -22,14 +22,12 @@ public class ApiServer {
     private static final String messagePath = "/api/messages";
     private static final String authenticationPath = "/api/login";
 
-    private static final int PORT = Config.getPORT_API();
+    private static final int PORT = Config.getLOCAL_API_PORT();
 
-    //jeszcze nieużywane, jest bardzo dużo teorii żeby to wszystko ogarnać. Ale dam radę
+    private HttpServer server;
+
     static final TokenManager tokenManager = new TokenManager(Config.getSecretKey(), Config.getExpirationTime());
 
-
-
-    //do tego mam pytanie czemu do Post.class jest user adapter?
     public static final Gson gson = new GsonBuilder()
             .registerTypeAdapter(Post.class, new UserAdapter())
             .create();
@@ -38,12 +36,9 @@ public class ApiServer {
         return tokenManager;
     }
 
-
-
-
-    public static void main(String[] args) throws InterruptedException {
+    public void runServer(){
         try {
-            HttpServer server = HttpServer.create(new InetSocketAddress(PORT), 0);
+            server = HttpServer.create(new InetSocketAddress(PORT), 0);
             server.createContext(postPath, new PostsHandler());
             server.createContext(userPath, new UsersHandler());
             server.createContext(messagePath, new MessageHandler());
@@ -53,6 +48,20 @@ public class ApiServer {
         } catch (IOException e) {
             System.out.println(e.getMessage());
         }
+    }
+
+    public void stopServer() {
+        if (server != null) {
+            System.out.println("[API SERVER]: Stopping...");
+            server.stop(0);
+        }
+    }
+
+    //niech pozostanie do testów
+    @Deprecated
+    public static void main(String[] args) throws InterruptedException {
+        ApiServer server = new ApiServer();
+        server.runServer();
     }
 }
 

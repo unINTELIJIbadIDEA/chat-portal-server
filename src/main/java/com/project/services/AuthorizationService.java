@@ -20,7 +20,7 @@ public class AuthorizationService {
     public String authenticateUser(String email, String password) throws SQLException {
 
         userDAO.connect();
-        User user = userDAO.getUserByEmail(email);
+            User user = userDAO.getUserByEmail(email);
         if (user != null && user.getPassword().equals(password)) {
             return tokenManager.generateToken(String.valueOf(user.getId()));
         }

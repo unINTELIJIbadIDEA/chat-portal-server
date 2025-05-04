@@ -40,12 +40,20 @@ public class Config {
         return Integer.parseInt(properties.getProperty("EXPIRATION_TIME"));
     }
 
-    public static Integer getPORT_API() {
-        return Integer.parseInt(properties.getProperty("API_PORT"));
+    public static Integer getLOCAL_API_PORT() {
+        return Integer.parseInt(properties.getProperty("LOCAL_API_PORT"));
     }
 
-    public static Integer getPORT_SERVER() {
-        return Integer.parseInt(properties.getProperty("SERVER_PORT"));
+    public static Integer getLOCAL_SERVER_PORT() {
+        return Integer.parseInt(properties.getProperty("LOCAL_TCP_PORT"));
+    }
+
+    public static Integer getREMOTE_API_PORT() {
+        return Integer.parseInt(properties.getProperty("REMOTE_API_PORT"));
+    }
+
+    public static Integer getREMOTE_SERVER_PORT() {
+        return Integer.parseInt(properties.getProperty("REMOTE_TCP_PORT"));
     }
 
     public static String getHOST_SERVER() {

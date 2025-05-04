@@ -6,7 +6,9 @@ import com.project.models.message.MessageRequest;
 import com.project.utils.Config;
 
 import java.io.*;
+import java.net.HttpURLConnection;
 import java.net.Socket;
+import java.net.URL;
 import java.time.LocalDateTime;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -112,8 +114,8 @@ public class ServerClientHandler implements Callable<Void> {
 
     private void sendMessageToApi(String token, Message message) {
         try {
-            java.net.URL url = new java.net.URL("http://localhost:" + Config.getPORT_API() + "/api/messages");
-            java.net.HttpURLConnection conn = (java.net.HttpURLConnection) url.openConnection();
+            URL url = new java.net.URL("http://" + Config.getHOST_SERVER() + ":" + Config.getLOCAL_API_PORT() + "/api/messages");
+            HttpURLConnection conn = (java.net.HttpURLConnection) url.openConnection();
             conn.setRequestMethod("POST");
             conn.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
             conn.setRequestProperty("Authorization", "Bearer " + token);

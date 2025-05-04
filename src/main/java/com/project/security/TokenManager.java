@@ -41,7 +41,7 @@ public class TokenManager {
 
             return claims.get("userId", Integer.class);
         } catch (Exception e) {
-            e.printStackTrace();
+            System.out.println(e.getMessage());
             return null;
         }
     }
