@@ -95,7 +95,7 @@ public class MessageDAO {
     }
 
     public List<Message> getMessagesByChatId(String chatId) {
-        String query = "SELECT * FROM message WHERE chat_id = ?";
+        String query = "SELECT * FROM messages WHERE chat_id = ?";
         List<Message> messages = new ArrayList<>();
         try {
             PreparedStatement statement = connection.prepareStatement(query);

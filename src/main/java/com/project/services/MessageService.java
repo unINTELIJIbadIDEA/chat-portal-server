@@ -21,45 +21,59 @@ public class MessageService {
         if (newMessage.content() == null || newMessage.content().trim().isEmpty()) {
             return false;
         }
-        messageDAO.connect();
-        boolean result = messageDAO.addMessage(newMessage);
-        messageDAO.close();
-        return result;
+        try {
+            messageDAO.connect();
+            boolean result = messageDAO.addMessage(newMessage);
+            return result;
+        } finally {
+            messageDAO.close();
+        }
     }
 
     public boolean updateMessage(Message updatedMessage) throws SQLException {
-        messageDAO.connect();
-        boolean result = messageDAO.updateMessage(updatedMessage);
-        messageDAO.close();
-        return result;
+        try {
+            messageDAO.connect();
+            return messageDAO.updateMessage(updatedMessage);
+        } finally {
+            messageDAO.close();
+        }
+
     }
 
     public boolean deleteMessage(int messageId) throws SQLException {
-        messageDAO.connect();
-        boolean result = messageDAO.deleteMessage(messageId);
-        messageDAO.close();
-        return result;
+        try{
+            messageDAO.connect();
+            return messageDAO.deleteMessage(messageId);
+        } finally {
+            messageDAO.close();
+        }
     }
 
     public String getMessageById(int messageId) throws SQLException {
-        messageDAO.connect();
-        String result = messageDAO.getMessageById(messageId);
-        messageDAO.close();
-        return result;
+        try {
+            messageDAO.connect();
+            return messageDAO.getMessageById(messageId);
+        } finally {
+            messageDAO.close();
+        }
     }
 
     public List<Message> getMessagesByChatId(String chatId) throws SQLException {
-        messageDAO.connect();
-        List<Message> result = messageDAO.getMessagesByChatId(chatId);
-        messageDAO.close();
-        return result;
+        try{
+            messageDAO.connect();
+            return messageDAO.getMessagesByChatId(chatId);
+        } finally {
+            messageDAO.close();
+        }
     }
 
     public List<Message> getAllMessages() throws SQLException {
-        messageDAO.connect();
-        List<Message> result = messageDAO.getAllMessages();
-        messageDAO.close();
-        return result;
+        try {
+            messageDAO.connect();
+            return messageDAO.getAllMessages();
+        } finally {
+            messageDAO.close();
+        }
     }
 
 }

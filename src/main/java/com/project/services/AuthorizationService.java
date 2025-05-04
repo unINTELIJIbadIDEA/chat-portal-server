@@ -19,10 +19,14 @@ public class AuthorizationService {
 
     public String authenticateUser(String email, String password) throws SQLException {
 
-        userDAO.connect();
+        try {
+            userDAO.connect();
             User user = userDAO.getUserByEmail(email);
-        if (user != null && user.getPassword().equals(password)) {
-            return tokenManager.generateToken(String.valueOf(user.getId()));
+            if (user != null && user.getPassword().equals(password)) {
+                return tokenManager.generateToken(String.valueOf(user.getId()));
+            }
+        } finally {
+            userDAO.close();
         }
         return null;
     }

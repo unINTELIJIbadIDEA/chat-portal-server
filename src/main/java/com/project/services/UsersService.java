@@ -19,37 +19,47 @@ public class UsersService {
     }
 
     public boolean addUser(User user) throws SQLException {
-        dao.connect();
-        boolean result = dao.addUser(user);
-        dao.close();
-        return result;
+        try {
+            dao.connect();
+            return dao.addUser(user);
+        } finally {
+            dao.close();
+        }
     }
 
     public boolean updateUser(User user) throws SQLException {
-        dao.connect();
-        boolean result = dao.updateUser(user);
-        dao.close();
-        return result;
+        try {
+            dao.connect();
+            return dao.updateUser(user);
+        } finally {
+            dao.close();
+        }
     }
 
     public boolean deleteUser(int id) throws SQLException {
-        dao.connect();
-        boolean result = dao.deleteUser(id);
-        dao.close();
-        return result;
+        try {
+            dao.connect();
+            return dao.deleteUser(id);
+        } finally {
+            dao.close();
+        }
     }
 
     public User getUserById(int id) throws SQLException {
-        dao.connect();
-        User user = dao.getUserWithId(id);
-        dao.close();
-        return user;
+        try {
+            dao.connect();
+            return dao.getUserWithId(id);
+        } finally {
+            dao.close();
+        }
     }
 
     public List<User> getAllUsers() throws SQLException {
-        dao.connect();
-        List<User> list = dao.getAllUsers();
-        dao.close();
-        return list;
+        try {
+            dao.connect();
+            return dao.getAllUsers();
+        } finally {
+            dao.close();
+        }
     }
 }
