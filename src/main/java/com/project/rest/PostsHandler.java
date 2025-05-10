@@ -1,8 +1,10 @@
 package com.project.rest;
 
+import com.google.gson.JsonObject;
+import com.project.models.Post;
+import com.project.server.ApiServer;
 import com.project.utils.Config;
 import com.project.dao.PostsDAO;
-import com.project.models.Post;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 
@@ -12,6 +14,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
+import java.time.LocalDate;
 import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -50,39 +53,71 @@ public class PostsHandler implements HttpHandler {
 
     private void handlePutRequest(HttpExchange exchange) throws SQLException, IOException {
         String path = exchange.getRequestURI().getPath();
-        String postId = path.substring(path.lastIndexOf("/") + 1);
+        String postIdStr = path.substring(path.lastIndexOf("/") + 1);
 
-        if (postId.isEmpty()) {
-            throw new IllegalArgumentException("Brak id w URL!");
+        if (postIdStr.isEmpty()) {
+            sendResponse(exchange, 400, "Brak ID posta w ścieżce");
+            return;
         }
 
-        InputStreamReader streamReader = new InputStreamReader(exchange.getRequestBody(), StandardCharsets.UTF_8);
-        BufferedReader bufferedReader = new BufferedReader(streamReader);
-        String requestBody = bufferedReader.lines().collect(Collectors.joining("\n"));
+        int postId;
+        try {
+            postId = Integer.parseInt(postIdStr);
+        } catch (NumberFormatException e) {
+            sendResponse(exchange, 400, "Nieprawidłowe ID posta");
+            return;
+        }
 
-        Post newPost = gson.fromJson(requestBody, Post.class);
+        String authHeader = exchange.getRequestHeaders().getFirst("Authorization");
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            sendResponse(exchange, 401, "Brak lub nieprawidłowy nagłówek Authorization");
+            return;
+        }
+
+        String token = authHeader.substring("Bearer ".length());
+        Integer userId = ApiServer.getTokenManager().validateTokenAndGetUserId(token);
+        if (userId == null) {
+            sendResponse(exchange, 401, "Nieprawidłowy token");
+            return;
+        }
+
+        BufferedReader reader = new BufferedReader(new InputStreamReader(exchange.getRequestBody(), StandardCharsets.UTF_8));
+        JsonObject json = gson.fromJson(reader, JsonObject.class);
+        String newContent = json.get("content").getAsString();
 
         PostsDAO dao = new PostsDAO(Config.getDbUrl(), Config.getDbUsername(), Config.getDbPassword());
         dao.connect();
 
-        boolean isUpdated = dao.updatePost(newPost);
-
+        boolean isUpdated = dao.updatePost(postId, newContent);
         if (isUpdated) {
-            sendResponse(exchange, 200, "Post updated successfully");
+            sendResponse(exchange, 200, "Post zaktualizowany pomyślnie");
         } else {
-            sendResponse(exchange, 500, "Failed to update post");
+            sendResponse(exchange, 500, "Nie udało się zaktualizować posta");
         }
+
+        dao.close();
     }
 
     private void handleDeleteRequest(HttpExchange exchange) throws SQLException, IOException {
-        Map<String, String> queryParams = getQueryParams(exchange.getRequestURI().getQuery());
-        String postId = queryParams.get("postId");
-        if (postId == null) {
-            throw new IllegalArgumentException("Brak argumentu w zapytaniu!");
+        String path = exchange.getRequestURI().getPath();
+        String postIdStr = path.substring(path.lastIndexOf("/") + 1);
+        String token = exchange.getRequestHeaders().getFirst("Authorization");
+
+        if (token == null || !token.startsWith("Bearer ")) {
+            sendResponse(exchange, 401, "Brak lub nieprawidłowy nagłówek Authorization");
+            return;
         }
+
+        Integer userId = ApiServer.getTokenManager().validateTokenAndGetUserId(token.substring("Bearer ".length()));
+
+        if (userId == null) {
+            sendResponse(exchange, 401, "Nieprawidłowy token");
+            return;
+        }
+
         PostsDAO dao = new PostsDAO(Config.getDbUrl(), Config.getDbUsername(), Config.getDbPassword());
         dao.connect();
-        boolean isDeleted = dao.deletePostWithId(Integer.parseInt(postId));
+        boolean isDeleted = dao.deletePostWithId(Integer.parseInt(postIdStr));
 
         if (!isDeleted) {
             throw new SQLException("Nie udało się usunąć");
@@ -93,16 +128,32 @@ public class PostsHandler implements HttpHandler {
     private void handlePostRequest(HttpExchange exchange) throws SQLException, IOException {
         InputStreamReader inputStreamReader = new InputStreamReader(exchange.getRequestBody(), StandardCharsets.UTF_8);
         BufferedReader bufferedReader = new BufferedReader(inputStreamReader);
-        String requestBody = bufferedReader.lines().collect(Collectors.joining("\n"));
 
-        Post newPost = gson.fromJson(requestBody, Post.class);
+        JsonObject jsonObject = gson.fromJson(bufferedReader, JsonObject.class);
+        String token = jsonObject.get("token").getAsString();
+        String content = jsonObject.get("content").getAsString();
+        Integer userId = ApiServer.getTokenManager().validateTokenAndGetUserId(token);
+
+        if(userId == null) {
+            sendResponse(exchange, 401, "INVALID TOKEN");
+            return;
+        }
+
+
+        Post newPost = new Post(
+                -1,
+                userId,
+                content,
+                LocalDate.now().toString()
+        );
+
         PostsDAO dao = new PostsDAO(Config.getDbUrl(), Config.getDbUsername(), Config.getDbPassword());
         dao.connect();
 
         boolean isAdded = dao.addPost(newPost);
 
         if (isAdded) {
-            sendResponse(exchange, 201, "Post added successfully");
+            sendResponse(exchange, 200, "Post added successfully");
         } else {
             sendResponse(exchange, 500, "Failed to add post");
         }
@@ -110,23 +161,43 @@ public class PostsHandler implements HttpHandler {
     }
 
     private void handleGetRequest(HttpExchange exchange) throws IOException, SQLException, InterruptedException {
-        Map<String, String> queryParams = getQueryParams(exchange.getRequestURI().getQuery());
-        String excludeId = queryParams.get("excludeId");
-        if (excludeId != null) {
-            getPostsExcludingId(exchange, Integer.parseInt(excludeId));
+        String authHeader = exchange.getRequestHeaders().getFirst("Authorization");
+        if(authHeader == null || !authHeader.startsWith("Bearer ")) {
+            sendResponse(exchange, 401, "Brak lub nieprawidłowy nagłówek Authorization");
+            return;
+        }
+
+        String token = authHeader.substring("Bearer ".length());
+        Integer userId = ApiServer.getTokenManager().validateTokenAndGetUserId(token);
+
+        if(userId == null) {
+            sendResponse(exchange, 401, "Invalid token");
+            return;
+        }
+
+        String path = exchange.getRequestURI().getPath();
+        if(path.endsWith("exclude")) {
+            getPostsExcludeId(exchange, userId);
         } else {
-            getAllPosts(exchange);
+            getPostsWithUserId(exchange, userId);
         }
     }
 
-    private void getPostsExcludingId(HttpExchange exchange, int excludeId) throws SQLException, IOException, InterruptedException {
+    private void getPostsExcludeId(HttpExchange exchange, int userId) throws IOException, SQLException {
         PostsDAO dao = new PostsDAO(Config.getDbUrl(), Config.getDbUsername(), Config.getDbPassword());
         dao.connect();
 
-        String responseContent = dao.getAllPostsExcludingId(excludeId);
-        System.out.println("resp con:" + responseContent);
+        String responseContent = dao.getAllPostsExcludingId(userId);
         sendResponse(exchange, 200, responseContent);
-        System.out.println("z bazy: " + responseContent);
+        dao.close();
+    }
+
+    private void getPostsWithUserId(HttpExchange exchange, int userId) throws SQLException, IOException, InterruptedException {
+        PostsDAO dao = new PostsDAO(Config.getDbUrl(), Config.getDbUsername(), Config.getDbPassword());
+        dao.connect();
+
+        String responseContent = dao.getAllPostsWithUserId(userId);
+        sendResponse(exchange, 200, responseContent);
         dao.close();
     }
 
@@ -146,7 +217,6 @@ public class PostsHandler implements HttpHandler {
         String responseContent = dao.getAllPosts();
 
         sendResponse(exchange, 200, responseContent);
-        System.out.println("z bazy: " + responseContent);
         dao.close();
     }
 

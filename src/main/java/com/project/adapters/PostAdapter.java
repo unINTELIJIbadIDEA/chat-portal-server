@@ -4,13 +4,13 @@ import com.google.gson.Gson;
 import com.google.gson.TypeAdapter;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
-import com.project.models.Post;
+import com.project.models.UsersPost;
 
 import java.io.IOException;
 
-public class PostAdapter extends TypeAdapter<Post> {
+public class PostAdapter extends TypeAdapter<UsersPost> {
     @Override
-    public void write(JsonWriter out, Post post) throws IOException {
+    public void write(JsonWriter out, UsersPost post) throws IOException {
         out.beginObject();
         out.name("postId").value(post.getPostId());
         out.name("userId").value(post.getUserId());
@@ -22,7 +22,7 @@ public class PostAdapter extends TypeAdapter<Post> {
     }
 
     @Override
-    public Post read(JsonReader in) throws IOException {
-        return new Gson().fromJson(in, Post.class);
+    public UsersPost read(JsonReader in) throws IOException {
+        return new Gson().fromJson(in, UsersPost.class);
     }
 }

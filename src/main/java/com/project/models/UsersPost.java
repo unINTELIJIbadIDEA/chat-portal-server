@@ -1,17 +1,35 @@
 package com.project.models;
 
-public class Post {
+public class UsersPost {
     //userId is an id of owner of the post
     private int postId, userId;
-    private String content, date;
+    private String name, surname, content, date;
 
-    public Post() {};
+    public UsersPost() {};
 
-    public Post(int postId, int userId, String content, String date) {
+    public UsersPost(int postId, int userId, String name, String surname, String content, String date) {
         this.postId = postId;
         this.userId = userId;
+        this.name = name;
+        this.surname = surname;
         this.content = content;
         this.date = date;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getSurname() {
+        return surname;
+    }
+
+    public void setSurname(String surname) {
+        this.surname = surname;
     }
 
     public String getContent() {
@@ -43,6 +61,6 @@ public class Post {
     }
 
     public void setUserId(int userId) {
-            this.userId = userId;
-        }
+        this.userId = userId;
+    }
 }

@@ -8,7 +8,7 @@ import com.project.rest.MessageHandler;
 import com.project.utils.Config;
 import com.project.rest.PostsHandler;
 import com.project.rest.UsersHandler;
-import com.project.models.Post;
+import com.project.models.UsersPost;
 import com.project.security.TokenManager;
 import com.sun.net.httpserver.HttpServer;
 
@@ -29,7 +29,7 @@ public class ApiServer {
     static final TokenManager tokenManager = new TokenManager(Config.getSecretKey(), Config.getExpirationTime());
 
     public static final Gson gson = new GsonBuilder()
-            .registerTypeAdapter(Post.class, new UserAdapter())
+            .registerTypeAdapter(UsersPost.class, new UserAdapter())
             .create();
 
     public static final TokenManager getTokenManager() {

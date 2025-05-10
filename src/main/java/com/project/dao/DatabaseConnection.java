@@ -3,7 +3,7 @@ package com.project.dao;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.project.adapters.PostAdapter;
-import com.project.models.Post;
+import com.project.models.UsersPost;
 import com.project.models.User;
 
 import java.sql.*;
@@ -34,12 +34,12 @@ public class DatabaseConnection {
 
     public String getAllPosts() {
         String query = "SELECT posts.postId, posts.userId, user.name, user.surname, posts.content, posts.date FROM posts INNER JOIN user ON user.userId = posts.userId;";
-        List<Post> postList = new ArrayList<>();
+        List<UsersPost> postList = new ArrayList<>();
         try {
             Statement statement = connection.createStatement();
             ResultSet posts = statement.executeQuery(query);
             while (posts.next()) {
-                postList.add(new Post(
+                postList.add(new UsersPost(
                         posts.getInt("postId"),
                         posts.getInt("userId"),
                         posts.getString("name"),
@@ -50,7 +50,7 @@ public class DatabaseConnection {
             }
 
             Gson gson = new GsonBuilder()
-                    .registerTypeAdapter(Post.class, new PostAdapter())
+                    .registerTypeAdapter(UsersPost.class, new PostAdapter())
                     .create();
             return gson.toJson(postList);
         } catch (SQLException e) {
@@ -61,13 +61,13 @@ public class DatabaseConnection {
 
     public String getAllPostsExcludingId(int excludeId) {
         String query = "SELECT posts.postId, posts.userId, user.name, user.surname, posts.content, posts.date FROM posts INNER JOIN user ON user.userId = posts.userId WHERE posts.userId != ?;";
-        List<Post> postList = new ArrayList<>();
+        List<UsersPost> postList = new ArrayList<>();
         try {
             PreparedStatement statement = connection.prepareStatement(query);
             statement.setInt(1, excludeId);
             ResultSet posts = statement.executeQuery();
             while (posts.next()) {
-                postList.add(new Post(
+                postList.add(new UsersPost(
                         posts.getInt("postId"),
                         posts.getInt("userId"),
                         posts.getString("name"),
@@ -97,7 +97,7 @@ public class DatabaseConnection {
         }
     }
 
-    public boolean addPost(Post newPost) {
+    public boolean addPost(UsersPost newPost) {
         String query = "INSERT INTO posts (userId, content, date) VALUES(?, ?, ?)";
         try {
             PreparedStatement statement = connection.prepareStatement(query);
@@ -112,7 +112,7 @@ public class DatabaseConnection {
         }
     }
 
-    public boolean updatePost(Post updatedPost) {
+    public boolean updatePost(UsersPost updatedPost) {
         String query = "UPDATE posts SET content = ? WHERE postId = ?";
         try {
             PreparedStatement statement = connection.prepareStatement(query);

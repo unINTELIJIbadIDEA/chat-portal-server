@@ -4,6 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.project.adapters.PostAdapter;
 import com.project.models.Post;
+import com.project.models.UsersPost;
 
 import java.sql.*;
 import java.util.ArrayList;
@@ -32,12 +33,12 @@ public class PostsDAO {
 
     public String getAllPosts() {
         String query = "SELECT posts.postId, posts.userId, user.name, user.surname, posts.content, posts.date FROM posts INNER JOIN user ON user.userId = posts.userId;";
-        List<Post> postList = new ArrayList<>();
+        List<UsersPost> postList = new ArrayList<>();
         try {
             Statement statement = connection.createStatement();
             ResultSet posts = statement.executeQuery(query);
             while (posts.next()) {
-                postList.add(new Post(
+                postList.add(new UsersPost(
                         posts.getInt("postId"),
                         posts.getInt("userId"),
                         posts.getString("name"),
@@ -48,7 +49,7 @@ public class PostsDAO {
             }
 
             Gson gson = new GsonBuilder()
-                    .registerTypeAdapter(Post.class, new PostAdapter())
+                    .registerTypeAdapter(UsersPost.class, new PostAdapter())
                     .create();
             return gson.toJson(postList);
         } catch (SQLException e) {
@@ -59,13 +60,39 @@ public class PostsDAO {
 
     public String getAllPostsExcludingId(int excludeId) {
         String query = "SELECT posts.postId, posts.userId, user.name, user.surname, posts.content, posts.date FROM posts INNER JOIN user ON user.userId = posts.userId WHERE posts.userId != ?;";
-        List<Post> postList = new ArrayList<>();
+        List<UsersPost> postList = new ArrayList<>();
         try {
             PreparedStatement statement = connection.prepareStatement(query);
             statement.setInt(1, excludeId);
             ResultSet posts = statement.executeQuery();
             while (posts.next()) {
-                postList.add(new Post(
+                postList.add(new UsersPost(
+                        posts.getInt("postId"),
+                        posts.getInt("userId"),
+                        posts.getString("name"),
+                        posts.getString("surname"),
+                        posts.getString("content"),
+                        posts.getString("date")
+                ));
+            }
+
+            Gson gson = new Gson();
+            return gson.toJson(postList);
+        } catch (SQLException e) {
+            System.out.println(e.getMessage());
+            return "";
+        }
+    }
+
+    public String getAllPostsWithUserId(int userId) {
+        String query = "SELECT posts.postId, posts.userId, user.name, user.surname, posts.content, posts.date FROM posts INNER JOIN user ON user.userId = posts.userId WHERE posts.userId = ?;";
+        List<UsersPost> postList = new ArrayList<>();
+        try {
+            PreparedStatement statement = connection.prepareStatement(query);
+            statement.setInt(1, userId);
+            ResultSet posts = statement.executeQuery();
+            while (posts.next()) {
+                postList.add(new UsersPost(
                         posts.getInt("postId"),
                         posts.getInt("userId"),
                         posts.getString("name"),
@@ -110,16 +137,12 @@ public class PostsDAO {
         }
     }
 
-    public boolean updatePost(Post updatedPost) {
+    public boolean updatePost(int postId, String newContent) throws SQLException {
         String query = "UPDATE posts SET content = ? WHERE postId = ?";
-        try {
-            PreparedStatement statement = connection.prepareStatement(query);
-            statement.setString(1, updatedPost.getContent());
-            statement.setInt(2, updatedPost.getPostId());
-            return statement.executeUpdate() > 0;
-        } catch (SQLException e) {
-            System.out.println(e.getMessage());
-            return false;
+        try (PreparedStatement stmt = connection.prepareStatement(query)) {
+            stmt.setString(1, newContent);
+            stmt.setInt(2, postId);
+            return stmt.executeUpdate() > 0;
         }
     }
 }
