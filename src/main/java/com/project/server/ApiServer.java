@@ -3,11 +3,8 @@ package com.project.server;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.project.adapters.UserAdapter;
-import com.project.rest.AuthorizationHandler;
-import com.project.rest.MessageHandler;
+import com.project.rest.*;
 import com.project.utils.Config;
-import com.project.rest.PostsHandler;
-import com.project.rest.UsersHandler;
 import com.project.models.UsersPost;
 import com.project.security.TokenManager;
 import com.sun.net.httpserver.HttpServer;
@@ -20,6 +17,7 @@ public class ApiServer {
     private static final String postPath = "/api/posts";
     private static final String userPath = "/api/users";
     private static final String messagePath = "/api/messages";
+    private static final String conversationPath = "/api/conversations";
     private static final String authenticationPath = "/api/login";
 
     private static final int PORT = Config.getLOCAL_API_PORT();
@@ -42,6 +40,7 @@ public class ApiServer {
             server.createContext(postPath, new PostsHandler());
             server.createContext(userPath, new UsersHandler());
             server.createContext(messagePath, new MessageHandler());
+            server.createContext(conversationPath, new ConversationHandler());
             server.createContext(authenticationPath, new AuthorizationHandler());
             server.setExecutor(null);
             server.start();
