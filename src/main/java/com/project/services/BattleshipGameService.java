@@ -25,24 +25,90 @@ public class BattleshipGameService {
     );
 
     public String createGame(int creatorId, String gameName, String chatId) throws SQLException {
-        try {
-            dao.connect();
+        System.out.println("=== CREATE GAME DEBUG ===");
+        System.out.println("Creator ID: " + creatorId);
+        System.out.println("Game Name: " + gameName);
+        System.out.println("Chat ID: " + chatId);
 
-            // NOWA LOGIKA - sprawdź czy użytkownik już ma aktywną grę w tym czacie
-            BattleshipGameInfo existingGame = getUserActiveGameInChat(creatorId, chatId);
+        try {
+            // KRYTYCZNE: Najpierw połącz z bazą
+            System.out.println("Connecting to database...");
+            dao.connect();
+            System.out.println("Database connected successfully");
+
+            // POPRAWKA: Sprawdź czy użytkownik już ma aktywną grę w tym czacie
+            // UWAGA: dao.connect() już zostało wywołane powyżej
+            System.out.println("Checking for existing games...");
+            BattleshipGameInfo existingGame = getUserActiveGameInChatInternal(creatorId, chatId);
             if (existingGame != null) {
                 System.out.println("User " + creatorId + " already has active game: " + existingGame.getGameId());
-                return existingGame.getGameId(); // Zwróć istniejącą grę
+                return existingGame.getGameId();
             }
 
             String gameId = UUID.randomUUID().toString();
+            System.out.println("Creating new game with ID: " + gameId);
+
             boolean created = dao.createGame(gameId, creatorId, gameName, chatId);
             if (created) {
-                // Powiadom serwer Battleship o nowej grze
+                System.out.println("Game created successfully in database");
                 BattleshipServer.getInstance().registerGame(gameId);
+                System.out.println("Game registered with Battleship server");
                 return gameId;
+            } else {
+                System.err.println("Failed to create game in database");
+                return null;
             }
-            return null;
+        } catch (SQLException e) {
+            System.err.println("=== DATABASE ERROR ===");
+            System.err.println("Error: " + e.getMessage());
+            System.err.println("SQLState: " + e.getSQLState());
+            System.err.println("Error Code: " + e.getErrorCode());
+            e.printStackTrace();
+            throw e;
+        } finally {
+            try {
+                dao.close();
+                System.out.println("Database connection closed");
+            } catch (SQLException e) {
+                System.err.println("Error closing database connection: " + e.getMessage());
+            }
+        }
+    }
+
+    // NOWA METODA - używa już otwartego połączenia
+    private BattleshipGameInfo getUserActiveGameInChatInternal(int userId, String chatId) throws SQLException {
+        System.out.println("Checking active games for user " + userId + " in chat " + chatId);
+        try {
+            // UWAGA: Zakładamy że dao.connect() już zostało wywołane
+            List<BattleshipGameInfo> userGames = dao.getUserGames(userId);
+            System.out.println("Found " + userGames.size() + " games for user");
+
+            BattleshipGameInfo activeGame = userGames.stream()
+                    .filter(game -> game.getChatId().equals(chatId))
+                    .filter(game -> "WAITING".equals(game.getStatus()) ||
+                            "READY".equals(game.getStatus()) ||
+                            "PLAYING".equals(game.getStatus()))
+                    .findFirst()
+                    .orElse(null);
+
+            if (activeGame != null) {
+                System.out.println("Found active game: " + activeGame.getGameId());
+            } else {
+                System.out.println("No active games found");
+            }
+
+            return activeGame;
+        } catch (SQLException e) {
+            System.err.println("Error checking active games: " + e.getMessage());
+            throw e;
+        }
+    }
+
+    // PUBLICZNA METODA - zarządza własnymi połączeniami
+    public BattleshipGameInfo getUserActiveGameInChat(int userId, String chatId) throws SQLException {
+        try {
+            dao.connect();
+            return getUserActiveGameInChatInternal(userId, chatId);
         } finally {
             dao.close();
         }
@@ -52,11 +118,11 @@ public class BattleshipGameService {
         try {
             dao.connect();
 
-            // NOWA LOGIKA - sprawdź czy użytkownik już ma aktywną grę w tym czacie
-            BattleshipGameInfo existingGame = getUserActiveGameInChat(playerId, chatId);
+            // Sprawdź czy użytkownik już ma aktywną grę w tym czacie
+            BattleshipGameInfo existingGame = getUserActiveGameInChatInternal(playerId, chatId);
             if (existingGame != null) {
                 System.out.println("User " + playerId + " already in game: " + existingGame.getGameId());
-                return true; // Użytkownik już jest w grze
+                return true;
             }
 
             // Znajdź aktywną grę w czacie (WAITING status)
@@ -76,30 +142,10 @@ public class BattleshipGameService {
 
             boolean joined = dao.joinGame(gameInfo.getGameId(), playerId);
             if (joined) {
-                // Powiadom serwer Battleship o nowym graczu
                 BattleshipServer.getInstance().addPlayerToGame(gameInfo.getGameId(), playerId);
             }
 
             return joined;
-        } finally {
-            dao.close();
-        }
-    }
-
-    // NOWA METODA - sprawdź czy użytkownik ma aktywną grę w czacie
-    public BattleshipGameInfo getUserActiveGameInChat(int userId, String chatId) throws SQLException {
-        try {
-            dao.connect();
-            List<BattleshipGameInfo> userGames = dao.getUserGames(userId);
-
-            // Znajdź aktywną grę w tym czacie
-            return userGames.stream()
-                    .filter(game -> game.getChatId().equals(chatId))
-                    .filter(game -> "WAITING".equals(game.getStatus()) ||
-                            "READY".equals(game.getStatus()) ||
-                            "PLAYING".equals(game.getStatus()))
-                    .findFirst()
-                    .orElse(null);
         } finally {
             dao.close();
         }
@@ -135,12 +181,22 @@ public class BattleshipGameService {
     }
 
     public boolean isUserInChat(int userId, String chatId) throws SQLException {
+        System.out.println("Checking if user " + userId + " is in chat " + chatId);
         try {
             conversationDAO.connect();
             List<String> userConversations = conversationDAO.getUserConversations(userId);
-            return userConversations.contains(chatId);
+            boolean isInChat = userConversations.contains(chatId);
+            System.out.println("User in chat: " + isInChat);
+            return isInChat;
+        } catch (SQLException e) {
+            System.err.println("Error checking user chat membership: " + e.getMessage());
+            throw e;
         } finally {
-            conversationDAO.close();
+            try {
+                conversationDAO.close();
+            } catch (SQLException e) {
+                System.err.println("Error closing conversation DAO: " + e.getMessage());
+            }
         }
     }
 

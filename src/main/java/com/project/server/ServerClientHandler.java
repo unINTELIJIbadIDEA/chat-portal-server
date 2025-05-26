@@ -37,20 +37,32 @@ public class ServerClientHandler implements Callable<Void> {
         String roomId = clientMessage.chatId();
         String token = clientMessage.token();
 
+        System.out.println("=== JOIN REQUEST DEBUG ===");
+        System.out.println("Room ID: " + roomId);
+        System.out.println("Token: " + (token != null ? token.substring(0, Math.min(10, token.length())) + "..." : "null"));
+        System.out.println("Client address: " + socket.getRemoteSocketAddress());
+
         Integer userId = ApiServer.getTokenManager().validateTokenAndGetUserId(token);
         if (userId == null) {
+            System.err.println("INVALID TOKEN for room: " + roomId);
             sendMessage(new Message(0, roomId, 0, "Invalid or expired token", LocalDateTime.now()));
             return;
         }
 
+        System.out.println("User ID from token: " + userId);
+
         ServerSessionManager sessionManager = ServerSessionManager.getInstance();
         if (!sessionManager.sessionExists(roomId)) {
+            System.out.println("Creating new session for room: " + roomId);
             sessionManager.createSession(roomId);
+        } else {
+            System.out.println("Session already exists for room: " + roomId);
         }
 
         sessionManager.addClientToSession(roomId, this);
         this.roomId = roomId;
 
+        System.out.println("Successfully added client to room: " + roomId);
         sendMessage(new Message(0, roomId, userId, "Joined room: " + roomId, LocalDateTime.now()));
     }
 

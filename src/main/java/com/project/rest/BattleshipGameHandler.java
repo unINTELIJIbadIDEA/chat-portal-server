@@ -12,6 +12,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
+import java.sql.SQLException;
 import java.util.Map;
 
 public class BattleshipGameHandler implements HttpHandler {
@@ -200,9 +201,23 @@ public class BattleshipGameHandler implements HttpHandler {
     }
 
     private void handleCreateGame(HttpExchange exchange, int userId) throws IOException {
-        Map<String, String> request = gson.fromJson(new InputStreamReader(exchange.getRequestBody()), Map.class);
+        System.out.println("=== CREATE GAME REQUEST ===");
+        System.out.println("User ID: " + userId);
+
+        Map<String, String> request;
+        try {
+            request = gson.fromJson(new InputStreamReader(exchange.getRequestBody()), Map.class);
+        } catch (Exception e) {
+            System.err.println("Error parsing request: " + e.getMessage());
+            sendResponse(exchange, 400, "{\"error\": \"Invalid JSON request\"}");
+            return;
+        }
+
         String gameName = request.get("gameName");
         String chatId = request.get("chatId");
+
+        System.out.println("Game name: " + gameName);
+        System.out.println("Chat ID: " + chatId);
 
         if (chatId == null || chatId.trim().isEmpty()) {
             sendResponse(exchange, 400, "{\"error\": \"Chat ID is required\"}");
@@ -210,15 +225,20 @@ public class BattleshipGameHandler implements HttpHandler {
         }
 
         try {
-            // czy użytkownik należy do chatu
+            // === SPRAWDŹ CZŁONKOSTWO W CZACIE ===
+            System.out.println("Checking chat membership...");
             if (!gameService.isUserInChat(userId, chatId)) {
+                System.out.println("User not in chat");
                 sendResponse(exchange, 403, "{\"error\": \"You are not a member of this chat\"}");
                 return;
             }
+            System.out.println("User is member of chat");
 
-            // NOWA LOGIKA - sprawdź czy użytkownik już ma grę w tym czacie
+            // === SPRAWDŹ ISTNIEJĄCE GRY ===
+            System.out.println("Checking for existing games...");
             BattleshipGameInfo existingGame = gameService.getUserActiveGameInChat(userId, chatId);
             if (existingGame != null) {
+                System.out.println("Found existing game: " + existingGame.getGameId());
                 Map<String, Object> response = Map.of(
                         "gameId", existingGame.getGameId(),
                         "status", existingGame.getStatus(),
@@ -232,8 +252,12 @@ public class BattleshipGameHandler implements HttpHandler {
                 return;
             }
 
+            // === UTWÓRZ NOWĄ GRĘ ===
+            System.out.println("Creating new game...");
             String gameId = gameService.createGame(userId, gameName, chatId);
             if (gameId != null) {
+                System.out.println("Game created successfully: " + gameId);
+
                 Map<String, Object> response = Map.of(
                         "gameId", gameId,
                         "status", "WAITING",
@@ -245,14 +269,34 @@ public class BattleshipGameHandler implements HttpHandler {
                 );
 
                 // Powiadom czat przez TCP serwer
-                notifyChatAboutGame(chatId, response, userId);
+                try {
+                    notifyChatAboutGame(chatId, response, userId);
+                    System.out.println("Chat notification sent");
+                } catch (Exception e) {
+                    System.err.println("Failed to notify chat: " + e.getMessage());
+                    // Nie przerywaj procesu - gra została utworzona
+                }
 
                 sendResponse(exchange, 201, gson.toJson(response));
             } else {
-                sendResponse(exchange, 500, "{\"error\": \"Failed to create game\"}");
+                System.err.println("Failed to create game - service returned null");
+                sendResponse(exchange, 500, "{\"error\": \"Failed to create game - unknown error\"}");
             }
+
+        } catch (SQLException e) {
+            System.err.println("=== DATABASE ERROR IN HANDLER ===");
+            System.err.println("Error: " + e.getMessage());
+            System.err.println("SQLState: " + e.getSQLState());
+            System.err.println("Error Code: " + e.getErrorCode());
+            e.printStackTrace();
+
+            String errorMsg = "Database error: " + e.getMessage();
+            sendResponse(exchange, 500, "{\"error\": \"" + errorMsg.replace("\"", "'") + "\"}");
+
         } catch (Exception e) {
-            sendResponse(exchange, 500, "{\"error\": \"Failed to create game: " + e.getMessage() + "\"}");
+            System.err.println("=== UNEXPECTED ERROR IN HANDLER ===");
+            e.printStackTrace();
+            sendResponse(exchange, 500, "{\"error\": \"Failed to create game: " + e.getMessage().replace("\"", "'") + "\"}");
         }
     }
 
