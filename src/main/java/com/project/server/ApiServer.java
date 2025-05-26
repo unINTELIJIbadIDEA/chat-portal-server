@@ -19,6 +19,7 @@ public class ApiServer {
     private static final String messagePath = "/api/messages";
     private static final String conversationPath = "/api/conversations";
     private static final String authenticationPath = "/api/login";
+    private static final String battleshipPath = "/api/battleship";
 
     private static final int PORT = Config.getLOCAL_API_PORT();
 
@@ -42,6 +43,7 @@ public class ApiServer {
             server.createContext(messagePath, new MessageHandler());
             server.createContext(conversationPath, new ConversationHandler());
             server.createContext(authenticationPath, new AuthorizationHandler());
+            server.createContext(battleshipPath, new BattleshipGameHandler());
             server.setExecutor(null);
             server.start();
         } catch (IOException e) {

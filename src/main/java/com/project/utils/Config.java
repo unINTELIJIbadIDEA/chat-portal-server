@@ -59,4 +59,8 @@ public class Config {
     public static String getHOST_SERVER() {
         return properties.getProperty("SERVER_HOST");
     }
+
+    public static Integer getBATTLESHIP_SERVER_PORT() {
+        return Integer.parseInt(properties.getProperty("BATTLESHIP_SERVER_PORT", "12350"));
+    }
 }
