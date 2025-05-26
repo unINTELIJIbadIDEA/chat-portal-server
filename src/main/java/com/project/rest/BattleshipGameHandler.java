@@ -1,8 +1,10 @@
 package com.project.rest;
 
 import com.google.gson.Gson;
+import com.project.models.battleship.BattleshipGameInfo;
 import com.project.server.ApiServer;
 import com.project.services.BattleshipGameService;
+import com.project.utils.Config;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 
@@ -62,7 +64,7 @@ public class BattleshipGameHandler implements HttpHandler {
             sendResponse(exchange, 500, "Internal Server Error");
         }
     }
-
+    /*
     private void handleCreateGame(HttpExchange exchange, int userId) throws IOException {
         Map<String, String> request = gson.fromJson(new InputStreamReader(exchange.getRequestBody()), Map.class);
         String gameName = request.get("gameName");
@@ -95,7 +97,7 @@ public class BattleshipGameHandler implements HttpHandler {
         } catch (Exception e) {
             sendResponse(exchange, 500, "Failed to create game: " + e.getMessage());
         }
-    }
+    }*/
 
     private void handleGetChatGames(HttpExchange exchange, int userId, String chatId) throws IOException {
         try {
@@ -116,7 +118,24 @@ public class BattleshipGameHandler implements HttpHandler {
         try {
             // czy użytkownik należy do czatu
             if (!gameService.isUserInChat(userId, chatId)) {
-                sendResponse(exchange, 403, "You are not a member of this chat");
+                sendResponse(exchange, 403, "{\"error\": \"You are not a member of this chat\"}");
+                return;
+            }
+
+            // NOWA LOGIKA - sprawdź czy użytkownik już ma grę w tym czacie
+            BattleshipGameInfo existingGame = gameService.getUserActiveGameInChat(userId, chatId);
+            if (existingGame != null) {
+                Map<String, Object> response = Map.of(
+                        "gameId", existingGame.getGameId(),
+                        "status", existingGame.getStatus(),
+                        "chatId", chatId,
+                        "gameName", existingGame.getGameName(),
+                        "battleshipServerPort", gameService.getBattleshipServerPort(),
+                        "playerId", userId,
+                        "message", "You are already in this game",
+                        "action", "rejoin"
+                );
+                sendResponse(exchange, 200, gson.toJson(response));
                 return;
             }
 
@@ -127,20 +146,22 @@ public class BattleshipGameHandler implements HttpHandler {
                 if (gameInfo != null) {
                     Map<String, Object> response = Map.of(
                             "gameId", gameInfo.getGameId(),
-                            "status", "joined",
+                            "status", gameInfo.getStatus(),
                             "chatId", chatId,
+                            "gameName", gameInfo.getGameName(),
                             "battleshipServerPort", gameService.getBattleshipServerPort(),
-                            "playerId", userId
+                            "playerId", userId,
+                            "action", "joined"
                     );
                     sendResponse(exchange, 200, gson.toJson(response));
                 } else {
-                    sendResponse(exchange, 500, "Game not found after joining");
+                    sendResponse(exchange, 500, "{\"error\": \"Game not found after joining\"}");
                 }
             } else {
-                sendResponse(exchange, 409, "Cannot join game - no available games or game is full");
+                sendResponse(exchange, 409, "{\"error\": \"Cannot join game - no available games, game is full, or you're trying to join your own game\"}");
             }
         } catch (Exception e) {
-            sendResponse(exchange, 500, "Failed to join game: " + e.getMessage());
+            sendResponse(exchange, 500, "{\"error\": \"Failed to join game: " + e.getMessage() + "\"}");
         }
     }
 
@@ -177,4 +198,101 @@ public class BattleshipGameHandler implements HttpHandler {
             os.write(response);
         }
     }
+
+    private void handleCreateGame(HttpExchange exchange, int userId) throws IOException {
+        Map<String, String> request = gson.fromJson(new InputStreamReader(exchange.getRequestBody()), Map.class);
+        String gameName = request.get("gameName");
+        String chatId = request.get("chatId");
+
+        if (chatId == null || chatId.trim().isEmpty()) {
+            sendResponse(exchange, 400, "{\"error\": \"Chat ID is required\"}");
+            return;
+        }
+
+        try {
+            // czy użytkownik należy do chatu
+            if (!gameService.isUserInChat(userId, chatId)) {
+                sendResponse(exchange, 403, "{\"error\": \"You are not a member of this chat\"}");
+                return;
+            }
+
+            // NOWA LOGIKA - sprawdź czy użytkownik już ma grę w tym czacie
+            BattleshipGameInfo existingGame = gameService.getUserActiveGameInChat(userId, chatId);
+            if (existingGame != null) {
+                Map<String, Object> response = Map.of(
+                        "gameId", existingGame.getGameId(),
+                        "status", existingGame.getStatus(),
+                        "chatId", chatId,
+                        "gameName", existingGame.getGameName(),
+                        "battleshipServerPort", gameService.getBattleshipServerPort(),
+                        "message", "You already have an active game in this chat",
+                        "action", "rejoin"
+                );
+                sendResponse(exchange, 200, gson.toJson(response));
+                return;
+            }
+
+            String gameId = gameService.createGame(userId, gameName, chatId);
+            if (gameId != null) {
+                Map<String, Object> response = Map.of(
+                        "gameId", gameId,
+                        "status", "WAITING",
+                        "chatId", chatId,
+                        "creatorId", userId,
+                        "gameName", gameName,
+                        "battleshipServerPort", gameService.getBattleshipServerPort(),
+                        "action", "created"
+                );
+
+                // Powiadom czat przez TCP serwer
+                notifyChatAboutGame(chatId, response, userId);
+
+                sendResponse(exchange, 201, gson.toJson(response));
+            } else {
+                sendResponse(exchange, 500, "{\"error\": \"Failed to create game\"}");
+            }
+        } catch (Exception e) {
+            sendResponse(exchange, 500, "{\"error\": \"Failed to create game: " + e.getMessage() + "\"}");
+        }
+    }
+
+    // NOWA METODA - powiadomienie przez połączenie TCP
+    private void notifyChatAboutGame(String chatId, Map<String, Object> gameInfo, int creatorId) {
+        try {
+            // Wyślij przez wewnętrzne połączenie TCP
+            // Symulujemy wiadomość od użytkownika z informacją o grze
+            java.net.Socket notificationSocket = new java.net.Socket("localhost", Config.getLOCAL_SERVER_PORT());
+
+            java.io.ObjectOutputStream out = new java.io.ObjectOutputStream(notificationSocket.getOutputStream());
+            out.flush(); // Ważne - najpierw flush
+
+            // Wiadomość dołączenia do pokoju
+            String token = ApiServer.getTokenManager().generateToken(String.valueOf(creatorId));
+            com.project.models.message.ClientMessage joinMessage =
+                    new com.project.models.message.ClientMessage("/join " + chatId, chatId, token);
+            out.writeObject(joinMessage);
+            out.flush();
+
+            // Krótkie opóźnienie
+            Thread.sleep(100);
+
+            // Wiadomość z informacją o grze
+            String gameData = gson.toJson(gameInfo);
+            com.project.models.message.ClientMessage gameMessage =
+                    new com.project.models.message.ClientMessage("/game_notification:" + gameData, chatId, token);
+            out.writeObject(gameMessage);
+            out.flush();
+
+            // Zamknij połączenie
+            out.close();
+            notificationSocket.close();
+
+            System.out.println("Game notification sent to chat: " + chatId);
+
+        } catch (Exception e) {
+            System.err.println("Failed to notify chat about game: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
 }

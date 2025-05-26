@@ -54,6 +54,33 @@ public class ServerClientHandler implements Callable<Void> {
         sendMessage(new Message(0, roomId, userId, "Joined room: " + roomId, LocalDateTime.now()));
     }
 
+    // NOWA METODA - obsługa powiadomień o grach
+    private void handleGameNotification(String gameData, String chatId, int userId) {
+        try {
+            // Wyślij specjalną wiadomość o grze do wszystkich w czacie
+            Message gameMessage = new Message(
+                    messageId.incrementAndGet(),
+                    chatId,
+                    userId,
+                    "[BATTLESHIP_GAME]" + gameData,
+                    LocalDateTime.now()
+            );
+
+            // Wyślij do wszystkich w sesji czatu
+            if (ServerSessionManager.getInstance().sessionExists(chatId)) {
+                ServerSessionManager.getInstance()
+                        .getRoom(chatId)
+                        .broadcast(gameMessage);
+
+                // Zapisz wiadomość w bazie danych przez API
+                sendMessageToApi(ApiServer.getTokenManager().generateToken(String.valueOf(userId)), gameMessage);
+            }
+
+        } catch (Exception e) {
+            System.err.println("Error handling game notification: " + e.getMessage());
+        }
+    }
+
     @Override
     public Void call() {
         try {
@@ -62,6 +89,16 @@ public class ServerClientHandler implements Callable<Void> {
 
                 if (clientMessage.content().startsWith("/join")) {
                     handleJoin(clientMessage);
+                    continue;
+                }
+
+                // NOWA LOGIKA - sprawdź czy to powiadomienie o grze
+                if (clientMessage.content().startsWith("/game_notification:")) {
+                    Integer userId = ApiServer.getTokenManager().validateTokenAndGetUserId(clientMessage.token());
+                    if (userId != null) {
+                        String gameData = clientMessage.content().substring("/game_notification:".length());
+                        handleGameNotification(gameData, clientMessage.chatId(), userId);
+                    }
                     continue;
                 }
 

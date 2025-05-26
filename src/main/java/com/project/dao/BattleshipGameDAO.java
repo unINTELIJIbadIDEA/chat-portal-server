@@ -130,4 +130,32 @@ public class BattleshipGameDAO {
                 rs.getTimestamp("created_at")
         );
     }
+
+    // DODAJ DO ISTNIEJĄCEJ KLASY BattleshipGameDAO
+
+    public boolean updateGameAfterPlayerLeave(String gameId, int newPlayer1Id) throws SQLException {
+        String sql = "UPDATE battleship_games SET player1_id = ?, player2_id = NULL, status = 'WAITING' WHERE game_id = ?";
+        try (PreparedStatement stmt = connection.prepareStatement(sql)) {
+            stmt.setInt(1, newPlayer1Id);
+            stmt.setString(2, gameId);
+            return stmt.executeUpdate() > 0;
+        }
+    }
+
+    public boolean removePlayer2(String gameId) throws SQLException {
+        String sql = "UPDATE battleship_games SET player2_id = NULL, status = 'WAITING' WHERE game_id = ?";
+        try (PreparedStatement stmt = connection.prepareStatement(sql)) {
+            stmt.setString(1, gameId);
+            return stmt.executeUpdate() > 0;
+        }
+    }
+
+    public boolean deleteGame(String gameId) throws SQLException {
+        String sql = "DELETE FROM battleship_games WHERE game_id = ?";
+        try (PreparedStatement stmt = connection.prepareStatement(sql)) {
+            stmt.setString(1, gameId);
+            return stmt.executeUpdate() > 0;
+        }
+    }
+
 }
