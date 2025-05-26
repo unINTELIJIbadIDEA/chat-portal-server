@@ -3,6 +3,7 @@ package com.project.models.battleship;
 import java.io.Serializable;
 
 public class Cell implements Serializable {
+    private static final long serialVersionUID = 1L;
     private Ship ship;
     private boolean shot;
 

@@ -3,6 +3,7 @@ package com.project.models.battleship;
 import java.io.Serializable;
 
 public class Position implements Serializable {
+    private static final long serialVersionUID = 1L;
     private final int x;
     private final int y;
 

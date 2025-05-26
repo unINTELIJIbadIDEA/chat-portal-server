@@ -2,6 +2,7 @@ package com.project.models.battleship.messages;
 
 
 public class TakeShotMessage extends BattleshipMessage {
+    private static final long serialVersionUID = 1L;
     private final int x;
     private final int y;
 

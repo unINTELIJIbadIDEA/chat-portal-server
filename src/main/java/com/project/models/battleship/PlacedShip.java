@@ -4,6 +4,7 @@ import java.io.Serializable;
 import java.util.List;
 
 public class PlacedShip implements Serializable {
+    private static final long serialVersionUID = 1L;
     private final Ship ship;
     private final List<Position> positions;
     private final boolean horizontal;

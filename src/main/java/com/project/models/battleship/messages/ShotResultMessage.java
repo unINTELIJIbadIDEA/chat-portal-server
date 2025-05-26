@@ -3,6 +3,7 @@ package com.project.models.battleship.messages;
 import com.project.models.battleship.ShotResult;
 
 public class ShotResultMessage extends BattleshipMessage {
+    private static final long serialVersionUID = 1L;
     private final ShotResult result;
     private final int x;
     private final int y;

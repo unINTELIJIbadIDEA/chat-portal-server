@@ -3,6 +3,7 @@ package com.project.models.battleship.messages;
 import java.io.Serializable;
 
 public abstract class BattleshipMessage implements Serializable {
+    private static final long serialVersionUID = 1L;
     private final BattleshipMessageType type;
     private final int playerId;
     private final String gameId;

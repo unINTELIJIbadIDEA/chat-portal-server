@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class GameBoard implements Serializable {
+    private static final long serialVersionUID = 1L;
     private static final int BOARD_SIZE = 10;
     private final Cell[][] board;
     private final List<PlacedShip> ships;

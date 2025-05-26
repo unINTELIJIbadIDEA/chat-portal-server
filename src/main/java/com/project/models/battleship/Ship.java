@@ -3,6 +3,7 @@ package com.project.models.battleship;
 import java.io.Serializable;
 
 public class Ship implements Serializable {
+    private static final long serialVersionUID = 1L;
     private final int length;
     private final ShipType type;
     private int hits;

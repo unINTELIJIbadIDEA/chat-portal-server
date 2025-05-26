@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class BattleshipGame implements Serializable {
+    private static final long serialVersionUID = 4431750269896121533L;
     private final String gameId;
     private final Map<Integer, GameBoard> playerBoards;
     private final Map<Integer, Boolean> playersReady;

@@ -3,6 +3,7 @@ package com.project.models.battleship.messages;
 import com.project.models.battleship.ShipType;
 
 public class PlaceShipMessage extends BattleshipMessage {
+    private static final long serialVersionUID = 1L;
     private final ShipType shipType;
     private final int x;
     private final int y;
