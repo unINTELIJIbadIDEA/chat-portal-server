@@ -11,7 +11,7 @@ import java.util.concurrent.Executors;
 
 public class ServerLauncher {
     public static void main(String[] args) {
-        ExecutorService executor = Executors.newFixedThreadPool(2, runnable -> {
+        ExecutorService executor = Executors.newFixedThreadPool(3, runnable -> {
             Thread thread = new Thread(runnable);
             thread.setDaemon(false);
             return thread;
@@ -21,8 +21,10 @@ public class ServerLauncher {
         var apiServer = new ApiServer();
         var battleshipServer = BattleshipServer.getInstance();
 
-        var tcpTunnel = new SshTunnel(Config.getREMOTE_SERVER_PORT(),Config.getLOCAL_SERVER_PORT());
-        var apiTunnel = new SshTunnel(Config.getREMOTE_API_PORT(),Config.getLOCAL_API_PORT());
+        // TUNELE - DODAJ battleshipTunnel
+        var tcpTunnel = new SshTunnel(Config.getREMOTE_SERVER_PORT(), Config.getLOCAL_SERVER_PORT());
+        var apiTunnel = new SshTunnel(Config.getREMOTE_API_PORT(), Config.getLOCAL_API_PORT());
+        var battleshipTunnel = new SshTunnel(Config.getREMOTE_BATTLESHIP_PORT(), Config.getBATTLESHIP_SERVER_PORT());
 
         executor.submit(() -> {
             Thread.currentThread().setName("TCP-Server-Thread");
@@ -32,6 +34,7 @@ public class ServerLauncher {
                 System.err.println("TCP Server crashed: " + e.getMessage());
             }
         });
+
         executor.submit(() -> {
             Thread.currentThread().setName("API-Server-Thread");
             try {
@@ -40,6 +43,7 @@ public class ServerLauncher {
                 System.err.println("API Server crashed: " + e.getMessage());
             }
         });
+
         executor.submit(() -> {
             Thread.currentThread().setName("Battleship-Server-Thread");
             try {
@@ -49,9 +53,10 @@ public class ServerLauncher {
             }
         });
 
+        // OTWÓRZ TUNELE - DODAJ battleshipTunnel
         apiTunnel.openTunnel();
         tcpTunnel.openTunnel();
-
+        battleshipTunnel.openTunnel();
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             System.out.println("Zamykanie serwerów...");
@@ -67,8 +72,10 @@ public class ServerLauncher {
             executor.shutdown();
             System.out.println("Serwery zamknięte.");
 
+            // ZAMKNIJ TUNELE - DODAJ battleshipTunnel
             apiTunnel.closeTunnel();
             tcpTunnel.closeTunnel();
+            battleshipTunnel.closeTunnel();
         }));
     }
 }

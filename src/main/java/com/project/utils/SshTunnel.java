@@ -26,6 +26,7 @@ public class SshTunnel {
         builder.redirectErrorStream(true);
 
         try {
+            System.out.println("[SSH TUNNEL] Opening tunnel: remote " + remotePort + " → local " + localPort);
             process = builder.start();
 
             new Thread(() -> {
@@ -33,14 +34,19 @@ public class SshTunnel {
                         new InputStreamReader(process.getInputStream()))) {
                     String line;
                     while ((line = reader.readLine()) != null) {
-                        System.out.println("[SSH TUNNEL] " + line);
+                        System.out.println("[SSH TUNNEL " + remotePort + "] " + line);
+
+                        // SZUKAJ tej linii w logach!
+                        if (line.contains("Forwarding HTTP traffic from")) {
+                            System.out.println("✅ TUNNEL READY: " + remotePort);
+                        }
                     }
                 } catch (IOException e) {
                     System.err.println("[SSH TUNNEL] Error reading output: " + e.getMessage());
                 }
             }).start();
 
-            System.out.println("[SSH TUNNEL] Tunnel opened: remote " + remotePort + " → local " + localPort);
+            System.out.println("[SSH TUNNEL] Tunnel process started: remote " + remotePort + " → local " + localPort);
 
         } catch (IOException e) {
             System.err.println("[SSH TUNNEL] Failed to open tunnel: " + e.getMessage());

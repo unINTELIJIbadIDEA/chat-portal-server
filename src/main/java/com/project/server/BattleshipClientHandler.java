@@ -16,9 +16,28 @@ public class BattleshipClientHandler implements Runnable {
     public BattleshipClientHandler(Socket socket, BattleshipServer server) throws IOException {
         this.socket = socket;
         this.server = server;
-        this.out = new ObjectOutputStream(socket.getOutputStream());
-        this.out.flush();
-        this.in = new ObjectInputStream(socket.getInputStream());
+
+        try {
+            // DODAJ opóźnienie i flush
+            System.out.println("[BATTLESHIP CLIENT]: Initializing streams...");
+
+            // Najpierw OutputStream z flush
+            this.out = new ObjectOutputStream(socket.getOutputStream());
+            this.out.flush();
+
+            // Krótkie opóźnienie
+            Thread.sleep(100);
+
+            // Potem InputStream
+            this.in = new ObjectInputStream(socket.getInputStream());
+
+            System.out.println("[BATTLESHIP CLIENT]: Streams initialized successfully");
+
+        } catch (Exception e) {
+            System.err.println("[BATTLESHIP CLIENT]: Stream initialization failed: " + e.getMessage());
+            e.printStackTrace();
+            throw new IOException("Failed to initialize streams", e);
+        }
     }
 
     @Override
@@ -26,7 +45,9 @@ public class BattleshipClientHandler implements Runnable {
         try {
             while (!socket.isClosed() && !socket.isInputShutdown()) {
                 try {
+                    System.out.println("[BATTLESHIP CLIENT]: Waiting for message...");
                     BattleshipMessage message = (BattleshipMessage) in.readObject();
+                    System.out.println("[BATTLESHIP CLIENT]: Received message: " + message.getType());
                     handleMessage(message);
                 } catch (ClassNotFoundException e) {
                     System.err.println("[BATTLESHIP CLIENT]: Invalid message class: " + e.getMessage());
@@ -34,9 +55,16 @@ public class BattleshipClientHandler implements Runnable {
                 } catch (EOFException e) {
                     System.out.println("[BATTLESHIP CLIENT]: Connection closed by client");
                     break;
+                } catch (StreamCorruptedException e) {
+                    System.err.println("[BATTLESHIP CLIENT]: Stream corrupted: " + e.getMessage());
+                    System.err.println("[BATTLESHIP CLIENT]: This may be caused by proxy/tunnel interference");
+                    break;
+                } catch (IOException e) {
+                    System.err.println("[BATTLESHIP CLIENT]: IO Error: " + e.getMessage());
+                    break;
                 }
             }
-        } catch (IOException e) {
+        } catch (Exception e) {
             System.out.println("[BATTLESHIP CLIENT]: Connection error: " + e.getMessage());
         } finally {
             cleanup();
@@ -64,8 +92,12 @@ public class BattleshipClientHandler implements Runnable {
 
     public void sendMessage(BattleshipMessage message) {
         try {
-            out.writeObject(message);
-            out.flush();
+            if (out != null) {
+                System.out.println("[BATTLESHIP CLIENT]: Sending message: " + message.getType());
+                out.writeObject(message);
+                out.flush();
+                System.out.println("[BATTLESHIP CLIENT]: Message sent successfully");
+            }
         } catch (IOException e) {
             System.err.println("[BATTLESHIP CLIENT]: Error sending message: " + e.getMessage());
         }
