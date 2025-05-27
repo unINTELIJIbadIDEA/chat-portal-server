@@ -91,11 +91,26 @@ public class BattleshipServer {
             connections.put(playerId, handler);
             System.out.println("[BATTLESHIP SERVER]: Player " + playerId + " connected to game " + gameId);
 
-            // Wyślij aktualny stan gry
+            // Dodaj gracza do gry
             BattleshipGame game = activeGames.get(gameId);
             if (game != null) {
-                handler.sendMessage(new GameUpdateMessage(game));
+                boolean added = game.addPlayer(playerId);
+                System.out.println("[BATTLESHIP SERVER]: Player " + playerId +
+                        (added ? " successfully added" : " failed to add") + " to game " + gameId);
+
+                System.out.println("[BATTLESHIP SERVER]: Game " + gameId + " state: " + game.getState());
+                System.out.println("[BATTLESHIP SERVER]: Players in game: " + game.getPlayerBoards().keySet());
+
+                // KRYTYCZNE: Broadcast do WSZYSTKICH graczy po każdej zmianie
+                GameUpdateMessage updateMessage = new GameUpdateMessage(game);
+                broadcastToGame(gameId, updateMessage);
+
+                System.out.println("[BATTLESHIP SERVER]: Broadcasted game update to all players");
+            } else {
+                System.err.println("[BATTLESHIP SERVER]: Game " + gameId + " not found!");
             }
+        } else {
+            System.err.println("[BATTLESHIP SERVER]: No connections map for game " + gameId);
         }
     }
 
