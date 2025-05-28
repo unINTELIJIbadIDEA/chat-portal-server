@@ -117,15 +117,19 @@ public class BattleshipGameHandler implements HttpHandler {
 
     private void handleJoinChatGame(HttpExchange exchange, int userId, String chatId) throws IOException {
         try {
-            // czy użytkownik należy do czatu
+            System.out.println("[BATTLESHIP HANDLER]: Join request - User: " + userId + ", Chat: " + chatId);
+
+            // Sprawdź czy użytkownik należy do czatu
             if (!gameService.isUserInChat(userId, chatId)) {
+                System.out.println("[BATTLESHIP HANDLER]: User not in chat");
                 sendResponse(exchange, 403, "{\"error\": \"You are not a member of this chat\"}");
                 return;
             }
 
-            // NOWA LOGIKA - sprawdź czy użytkownik już ma grę w tym czacie
+            // Sprawdź czy użytkownik już ma grę w tym czacie
             BattleshipGameInfo existingGame = gameService.getUserActiveGameInChat(userId, chatId);
             if (existingGame != null) {
+                System.out.println("[BATTLESHIP HANDLER]: User already has game: " + existingGame.getGameId());
                 Map<String, Object> response = Map.of(
                         "gameId", existingGame.getGameId(),
                         "status", existingGame.getStatus(),
@@ -140,11 +144,23 @@ public class BattleshipGameHandler implements HttpHandler {
                 return;
             }
 
+            // Próbuj dołączyć do gry
+            System.out.println("[BATTLESHIP HANDLER]: Attempting to join game...");
             boolean joined = gameService.joinChatGame(userId, chatId);
+
             if (joined) {
-                // pobieram informacje o grze do której dołączył
+                System.out.println("[BATTLESHIP HANDLER]: Successfully joined game");
+                // Pobierz informacje o grze do której dołączył - sprawdź wszystkie aktywne gry
                 var gameInfo = gameService.getActiveChatGame(chatId);
+
+                // Jeśli nie ma aktywnej gry, sprawdź czy użytkownik ma jakąkolwiek grę w tym czacie
+                if (gameInfo == null) {
+                    System.out.println("[BATTLESHIP HANDLER]: No active chat game found, checking user games...");
+                    gameInfo = gameService.getUserActiveGameInChat(userId, chatId);
+                }
+
                 if (gameInfo != null) {
+                    System.out.println("[BATTLESHIP HANDLER]: Found game info: " + gameInfo.getGameId() + " with status: " + gameInfo.getStatus());
                     Map<String, Object> response = Map.of(
                             "gameId", gameInfo.getGameId(),
                             "status", gameInfo.getStatus(),
@@ -156,13 +172,22 @@ public class BattleshipGameHandler implements HttpHandler {
                     );
                     sendResponse(exchange, 200, gson.toJson(response));
                 } else {
+                    System.err.println("[BATTLESHIP HANDLER]: Game not found after joining - this should not happen");
                     sendResponse(exchange, 500, "{\"error\": \"Game not found after joining\"}");
                 }
             } else {
+                System.out.println("[BATTLESHIP HANDLER]: Failed to join game");
                 sendResponse(exchange, 409, "{\"error\": \"Cannot join game - no available games, game is full, or you're trying to join your own game\"}");
             }
+
+        } catch (SQLException e) {
+            System.err.println("[BATTLESHIP HANDLER]: Database error: " + e.getMessage());
+            e.printStackTrace();
+            sendResponse(exchange, 500, "{\"error\": \"Database error: " + e.getMessage().replace("\"", "'") + "\"}");
         } catch (Exception e) {
-            sendResponse(exchange, 500, "{\"error\": \"Failed to join game: " + e.getMessage() + "\"}");
+            System.err.println("[BATTLESHIP HANDLER]: Unexpected error: " + e.getMessage());
+            e.printStackTrace();
+            sendResponse(exchange, 500, "{\"error\": \"Internal server error: " + e.getMessage().replace("\"", "'") + "\"}");
         }
     }
 

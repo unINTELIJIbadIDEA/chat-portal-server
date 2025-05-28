@@ -96,11 +96,26 @@ public class BattleshipGameDAO {
     public boolean joinGame(String gameId, int playerId) throws SQLException {
         validateConnection();
 
-        String sql = "UPDATE battleship_games SET player2_id = ?, status = 'READY' WHERE game_id = ? AND player2_id IS NULL";
+        System.out.println("[BATTLESHIP DAO]: Joining game " + gameId + " as player " + playerId);
+
+        String sql = "UPDATE battleship_games SET player2_id = ?, status = 'READY' WHERE game_id = ? AND player2_id IS NULL AND status = 'WAITING'";
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
             stmt.setInt(1, playerId);
             stmt.setString(2, gameId);
-            return stmt.executeUpdate() > 0;
+
+            int rowsAffected = stmt.executeUpdate();
+            System.out.println("[BATTLESHIP DAO]: Rows affected: " + rowsAffected);
+
+            if (rowsAffected > 0) {
+                System.out.println("[BATTLESHIP DAO]: Successfully joined game " + gameId + " as player2");
+                return true;
+            } else {
+                System.out.println("[BATTLESHIP DAO]: Failed to join game - game may be full or not exist");
+                return false;
+            }
+        } catch (SQLException e) {
+            System.err.println("[BATTLESHIP DAO]: Error joining game: " + e.getMessage());
+            throw e;
         }
     }
 

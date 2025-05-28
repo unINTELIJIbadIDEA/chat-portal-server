@@ -31,17 +31,19 @@ public class BattleshipGameService {
         System.out.println("Chat ID: " + chatId);
 
         try {
-            // KRYTYCZNE: Najpierw połącz z bazą
+            // Połącz z bazą
             System.out.println("Connecting to database...");
             dao.connect();
             System.out.println("Database connected successfully");
 
-            // POPRAWKA: Sprawdź czy użytkownik już ma aktywną grę w tym czacie
-            // UWAGA: dao.connect() już zostało wywołane powyżej
+            // Sprawdź czy użytkownik już ma aktywną grę w tym czacie
             System.out.println("Checking for existing games...");
             BattleshipGameInfo existingGame = getUserActiveGameInChatInternal(creatorId, chatId);
             if (existingGame != null) {
                 System.out.println("User " + creatorId + " already has active game: " + existingGame.getGameId());
+
+                // KRYTYCZNE: Upewnij się, że gra jest zarejestrowana na serwerze
+                BattleshipServer.getInstance().registerGame(existingGame.getGameId());
                 return existingGame.getGameId();
             }
 
@@ -51,8 +53,11 @@ public class BattleshipGameService {
             boolean created = dao.createGame(gameId, creatorId, gameName, chatId);
             if (created) {
                 System.out.println("Game created successfully in database");
+
+                // KRYTYCZNE: Zarejestruj grę na serwerze Battleship
                 BattleshipServer.getInstance().registerGame(gameId);
                 System.out.println("Game registered with Battleship server");
+
                 return gameId;
             } else {
                 System.err.println("Failed to create game in database");
@@ -117,32 +122,57 @@ public class BattleshipGameService {
     public boolean joinChatGame(int playerId, String chatId) throws SQLException {
         try {
             dao.connect();
+            System.out.println("[BATTLESHIP SERVICE]: Join request - Player: " + playerId + ", Chat: " + chatId);
 
             // Sprawdź czy użytkownik już ma aktywną grę w tym czacie
             BattleshipGameInfo existingGame = getUserActiveGameInChatInternal(playerId, chatId);
             if (existingGame != null) {
-                System.out.println("User " + playerId + " already in game: " + existingGame.getGameId());
+                System.out.println("[BATTLESHIP SERVICE]: User " + playerId + " already in game: " + existingGame.getGameId());
+
+                // KRYTYCZNE: Zarejestruj grę na serwerze jeśli nie jest
+                BattleshipServer.getInstance().registerGame(existingGame.getGameId());
                 return true;
             }
 
-            // Znajdź aktywną grę w czacie (WAITING status)
-            BattleshipGameInfo gameInfo = dao.getActiveChatGame(chatId);
+            // Znajdź aktywną grę w czacie (WAITING lub READY status)
+            System.out.println("[BATTLESHIP SERVICE]: Looking for active games in chat: " + chatId);
+            List<BattleshipGameInfo> chatGames = dao.getChatGames(chatId);
+            System.out.println("[BATTLESHIP SERVICE]: Found " + chatGames.size() + " games in chat");
 
-            if (gameInfo == null) {
+            BattleshipGameInfo availableGame = null;
+            for (BattleshipGameInfo game : chatGames) {
+                System.out.println("[BATTLESHIP SERVICE]: Game " + game.getGameId() +
+                        " - Status: " + game.getStatus() +
+                        " - Player1: " + game.getPlayer1Id() +
+                        " - Player2: " + game.getPlayer2Id());
+
+                // Szukaj gry która jest WAITING i nie ma drugiego gracza
+                if ("WAITING".equals(game.getStatus()) && game.getPlayer2Id() == null) {
+                    // Sprawdź czy to nie jest gra tego samego gracza
+                    if (game.getPlayer1Id() != playerId) {
+                        availableGame = game;
+                        break;
+                    }
+                }
+            }
+
+            if (availableGame == null) {
+                System.out.println("[BATTLESHIP SERVICE]: No available games found in chat");
                 return false; // Brak dostępnych gier w czacie
             }
 
-            if (gameInfo.getPlayer2Id() != null) {
-                return false; // Gra już pełna
-            }
+            System.out.println("[BATTLESHIP SERVICE]: Found available game: " + availableGame.getGameId());
 
-            if (gameInfo.getPlayer1Id() == playerId) {
-                return false; // Nie można dołączyć do własnej gry
-            }
-
-            boolean joined = dao.joinGame(gameInfo.getGameId(), playerId);
+            // Dołącz do gry
+            boolean joined = dao.joinGame(availableGame.getGameId(), playerId);
             if (joined) {
-                BattleshipServer.getInstance().addPlayerToGame(gameInfo.getGameId(), playerId);
+                System.out.println("[BATTLESHIP SERVICE]: Successfully joined game in database");
+
+                // KRYTYCZNE: Zarejestruj grę na serwerze Battleship
+                BattleshipServer.getInstance().registerGame(availableGame.getGameId());
+                System.out.println("[BATTLESHIP SERVICE]: Game registered with Battleship server");
+            } else {
+                System.err.println("[BATTLESHIP SERVICE]: Failed to join game in database");
             }
 
             return joined;
@@ -212,7 +242,27 @@ public class BattleshipGameService {
     public BattleshipGameInfo getActiveChatGame(String chatId) throws SQLException {
         try {
             dao.connect();
-            return dao.getActiveChatGame(chatId);
+            System.out.println("[BATTLESHIP SERVICE]: Getting active game for chat: " + chatId);
+
+            List<BattleshipGameInfo> chatGames = dao.getChatGames(chatId);
+            System.out.println("[BATTLESHIP SERVICE]: Found " + chatGames.size() + " games in chat");
+
+            // Szukaj najnowszej aktywnej gry (WAITING, READY, lub PLAYING)
+            BattleshipGameInfo activeGame = chatGames.stream()
+                    .filter(game -> "WAITING".equals(game.getStatus()) ||
+                            "READY".equals(game.getStatus()) ||
+                            "PLAYING".equals(game.getStatus()))
+                    .findFirst() // getChatGames już sortuje po created_at DESC
+                    .orElse(null);
+
+            if (activeGame != null) {
+                System.out.println("[BATTLESHIP SERVICE]: Found active game: " + activeGame.getGameId() +
+                        " with status: " + activeGame.getStatus());
+            } else {
+                System.out.println("[BATTLESHIP SERVICE]: No active games found");
+            }
+
+            return activeGame;
         } finally {
             dao.close();
         }
