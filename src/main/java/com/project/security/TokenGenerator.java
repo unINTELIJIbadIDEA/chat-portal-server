@@ -1,6 +1,6 @@
 package com.project.security;
 
-import com.project.utils.Config;
+import com.project.config.ConfigProperties;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
@@ -29,7 +29,7 @@ public class TokenGenerator {
 
     public static void main(String[] args) {
         int userId = 42;
-        String secretKey = Config.getSecretKey();
+        String secretKey = ConfigProperties.getSecretKey();
         long expirationTime = 1000 * 60 * 60;
 
         String token = generateToken(userId, secretKey, expirationTime);

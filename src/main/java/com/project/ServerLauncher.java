@@ -2,7 +2,7 @@ package com.project;
 
 import com.project.server.ApiServer;
 import com.project.server.Server;
-import com.project.utils.Config;
+import com.project.config.ConfigProperties;
 import com.project.utils.SshTunnel;
 
 import java.util.concurrent.ExecutorService;
@@ -19,8 +19,8 @@ public class ServerLauncher {
         var tcpServer = new Server();
         var apiServer = new ApiServer();
 
-        var tcpTunnel = new SshTunnel(Config.getREMOTE_SERVER_PORT(),Config.getLOCAL_SERVER_PORT());
-        var apiTunnel = new SshTunnel(Config.getREMOTE_API_PORT(),Config.getLOCAL_API_PORT());
+        var tcpTunnel = new SshTunnel(ConfigProperties.getREMOTE_SERVER_PORT(), ConfigProperties.getLOCAL_SERVER_PORT());
+        var apiTunnel = new SshTunnel(ConfigProperties.getREMOTE_API_PORT(), ConfigProperties.getLOCAL_API_PORT());
 
         executor.submit(() -> {
             Thread.currentThread().setName("TCP-Server-Thread");

@@ -9,7 +9,7 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
-public class MessageDAO {
+public class MessageDAO implements IMessegeDAO {
 
     private final String dbURL;
     private final String dbName;
@@ -22,14 +22,17 @@ public class MessageDAO {
         this.dbPassword = dbPassword;
     }
 
+    @Override
     public void connect() throws SQLException {
         connection = DriverManager.getConnection(dbURL, dbName, dbPassword);
     }
 
+    @Override
     public void close() throws SQLException {
         connection.close();
     }
 
+    @Override
     public boolean addMessage(Message newMessage) {
         String query = "INSERT INTO messages (chat_id, sender_id, content, time) VALUES (?, ?, ?, ?)";
         try {
@@ -46,6 +49,7 @@ public class MessageDAO {
         }
     }
 
+    @Override
     public boolean updateMessage(Message message) throws SQLException {
         String sql = "UPDATE messages SET chat_id = ?, sender_id = ?, content = ?, time = ? WHERE message_id = ?";
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
@@ -58,6 +62,7 @@ public class MessageDAO {
         }
     }
 
+    @Override
     public boolean deleteMessage(int messageId) throws SQLException {
         String sql = "DELETE FROM messages WHERE message_id = ?";
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
@@ -66,6 +71,7 @@ public class MessageDAO {
         }
     }
 
+    @Override
     public String getMessageById(int messageId) {
         String query = "SELECT * FROM messages WHERE message_id = ?";
         try {
@@ -94,6 +100,7 @@ public class MessageDAO {
         }
     }
 
+    @Override
     public List<Message> getMessagesByChatId(String chatId) {
         String query = "SELECT * FROM messages WHERE chat_id = ?";
         List<Message> messages = new ArrayList<>();
@@ -120,6 +127,7 @@ public class MessageDAO {
         }
     }
 
+    @Override
     public List<Message> getAllMessages() {
         String query = "SELECT * FROM messages";
         List<Message> messages = new ArrayList<>();

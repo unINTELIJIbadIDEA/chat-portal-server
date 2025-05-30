@@ -1,23 +1,20 @@
 package com.project.services;
 
-import com.project.dao.UsersDAO;
+import com.project.config.ConfigDAO;
+import com.project.dao.IUsersDAO;
 import com.project.models.User;
-import com.project.utils.Config;
 
 import java.sql.SQLException;
 import java.util.List;
 
-public class UsersService {
-    private final UsersDAO dao;
+public class UsersService implements IUsersService {
+    private final IUsersDAO dao;
 
     public UsersService() {
-        this.dao = new UsersDAO(
-                Config.getDbUrl(),
-                Config.getDbUsername(),
-                Config.getDbPassword()
-        );
+        this.dao = ConfigDAO.getInstance().getUsersDAO();
     }
 
+    @Override
     public boolean addUser(User user) throws SQLException {
         try {
             dao.connect();
@@ -27,6 +24,7 @@ public class UsersService {
         }
     }
 
+    @Override
     public boolean updateUser(User user) throws SQLException {
         try {
             dao.connect();
@@ -36,6 +34,7 @@ public class UsersService {
         }
     }
 
+    @Override
     public boolean deleteUser(int id) throws SQLException {
         try {
             dao.connect();
@@ -45,6 +44,7 @@ public class UsersService {
         }
     }
 
+    @Override
     public User getUserById(int id) throws SQLException {
         try {
             dao.connect();
@@ -54,6 +54,7 @@ public class UsersService {
         }
     }
 
+    @Override
     public List<User> getAllUsers() throws SQLException {
         try {
             dao.connect();

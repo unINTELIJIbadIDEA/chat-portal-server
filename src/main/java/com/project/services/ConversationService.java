@@ -1,18 +1,19 @@
 package com.project.services;
 
-import com.project.dao.ConversationDAO;
-import com.project.utils.Config;
+import com.project.config.ConfigDAO;
+import com.project.dao.IConversationDAO;
 
 import java.sql.SQLException;
 import java.util.List;
 
-public class ConversationService {
-    private final ConversationDAO dao = new ConversationDAO(
-            Config.getDbUrl(),
-            Config.getDbUsername(),
-            Config.getDbPassword()
-    );
+public class ConversationService implements IConversationService {
+    private final IConversationDAO dao;
 
+    public ConversationService(){
+        dao = ConfigDAO.getInstance().getConversationDAO();
+    }
+
+    @Override
     public boolean createConversation(int userId, String roomId, String password) throws SQLException {
         try {
             dao.connect();
@@ -24,6 +25,7 @@ public class ConversationService {
         }
     }
 
+    @Override
     public boolean joinConversation(int userId, String roomId, String password) throws SQLException {
         try {
             dao.connect();
@@ -35,6 +37,7 @@ public class ConversationService {
         }
     }
 
+    @Override
     public boolean leaveConversation(int userId, String roomId) throws SQLException {
         try {
             dao.connect();
@@ -44,6 +47,7 @@ public class ConversationService {
         }
     }
 
+    @Override
     public List<String> getUserConversations(int userId) throws SQLException {
         try {
             dao.connect();

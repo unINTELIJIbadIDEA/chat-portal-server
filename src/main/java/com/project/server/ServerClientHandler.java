@@ -3,7 +3,7 @@ package com.project.server;
 import com.project.models.message.ClientMessage;
 import com.project.models.message.Message;
 import com.project.models.message.MessageRequest;
-import com.project.utils.Config;
+import com.project.config.ConfigProperties;
 
 import java.io.*;
 import java.net.HttpURLConnection;
@@ -114,7 +114,7 @@ public class ServerClientHandler implements Callable<Void> {
 
     private void sendMessageToApi(String token, Message message) {
         try {
-            URL url = new java.net.URL("http://" + Config.getHOST_SERVER() + ":" + Config.getLOCAL_API_PORT() + "/api/messages");
+            URL url = new java.net.URL("http://" + ConfigProperties.getHOST_SERVER() + ":" + ConfigProperties.getLOCAL_API_PORT() + "/api/messages");
             HttpURLConnection conn = (java.net.HttpURLConnection) url.openConnection();
             conn.setRequestMethod("POST");
             conn.setRequestProperty("Content-Type", "application/json; charset=UTF-8");

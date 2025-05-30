@@ -1,22 +1,24 @@
 package com.project.services;
 
-import com.project.dao.UsersDAO;
+import com.project.config.ConfigDAO;
+import com.project.dao.IUsersDAO;
 import com.project.models.User;
 import com.project.security.TokenManager;
-import com.project.utils.Config;
+import com.project.config.ConfigProperties;
 
 import java.sql.SQLException;
 
-public class AuthorizationService {
+public class AuthorizationService implements IAuthorizationService {
 
-    private final UsersDAO userDAO;
+    private final IUsersDAO userDAO;
     private final TokenManager tokenManager;
 
     public AuthorizationService() {
-        this.userDAO = new UsersDAO(Config.getDbUrl(), Config.getDbUsername(), Config.getDbPassword());
-        this.tokenManager = new TokenManager(Config.getSecretKey(), Config.getExpirationTime());
+        this.userDAO = ConfigDAO.getInstance().getUsersDAO();
+        this.tokenManager = new TokenManager(ConfigProperties.getSecretKey(), ConfigProperties.getExpirationTime());
     }
 
+    @Override
     public String authenticateUser(String email, String password) throws SQLException {
 
         try {
