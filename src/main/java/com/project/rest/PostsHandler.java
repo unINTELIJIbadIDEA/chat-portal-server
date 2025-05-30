@@ -1,10 +1,10 @@
 package com.project.rest;
 
 import com.google.gson.JsonObject;
+import com.project.config.ConfigDAO;
+import com.project.dao.IPostsDAO;
 import com.project.models.Post;
 import com.project.server.ApiServer;
-import com.project.utils.Config;
-import com.project.dao.PostsDAO;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 
@@ -22,6 +22,11 @@ import java.util.stream.Stream;
 import static com.project.server.ApiServer.*;
 
 public class PostsHandler implements HttpHandler {
+    private IPostsDAO dao;
+
+    public PostsHandler() {
+        this.dao = ConfigDAO.getInstance().getPostsDAO();
+    }
 
     @Override
     public void handle(HttpExchange exchange) throws IOException {
@@ -85,7 +90,7 @@ public class PostsHandler implements HttpHandler {
         JsonObject json = gson.fromJson(reader, JsonObject.class);
         String newContent = json.get("content").getAsString();
 
-        PostsDAO dao = new PostsDAO(Config.getDbUrl(), Config.getDbUsername(), Config.getDbPassword());
+
         dao.connect();
 
         boolean isUpdated = dao.updatePost(postId, newContent);
@@ -115,7 +120,6 @@ public class PostsHandler implements HttpHandler {
             return;
         }
 
-        PostsDAO dao = new PostsDAO(Config.getDbUrl(), Config.getDbUsername(), Config.getDbPassword());
         dao.connect();
         boolean isDeleted = dao.deletePostWithId(Integer.parseInt(postIdStr));
 
@@ -147,7 +151,6 @@ public class PostsHandler implements HttpHandler {
                 LocalDate.now().toString()
         );
 
-        PostsDAO dao = new PostsDAO(Config.getDbUrl(), Config.getDbUsername(), Config.getDbPassword());
         dao.connect();
 
         boolean isAdded = dao.addPost(newPost);
@@ -184,7 +187,6 @@ public class PostsHandler implements HttpHandler {
     }
 
     private void getPostsExcludeId(HttpExchange exchange, int userId) throws IOException, SQLException {
-        PostsDAO dao = new PostsDAO(Config.getDbUrl(), Config.getDbUsername(), Config.getDbPassword());
         dao.connect();
 
         String responseContent = dao.getAllPostsExcludingId(userId);
@@ -193,7 +195,6 @@ public class PostsHandler implements HttpHandler {
     }
 
     private void getPostsWithUserId(HttpExchange exchange, int userId) throws SQLException, IOException, InterruptedException {
-        PostsDAO dao = new PostsDAO(Config.getDbUrl(), Config.getDbUsername(), Config.getDbPassword());
         dao.connect();
 
         String responseContent = dao.getAllPostsWithUserId(userId);
@@ -212,7 +213,6 @@ public class PostsHandler implements HttpHandler {
     }
 
     private void getAllPosts(HttpExchange exchange) throws SQLException, IOException {
-        PostsDAO dao = new PostsDAO(Config.getDbUrl(), Config.getDbUsername(), Config.getDbPassword());
         dao.connect();
         String responseContent = dao.getAllPosts();
 

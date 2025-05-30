@@ -3,7 +3,8 @@ package com.project.rest;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
-import com.project.services.AuthorizationService;
+import com.project.config.ConfigService;
+import com.project.services.IAuthorizationService;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 
@@ -18,16 +19,16 @@ import java.util.stream.Collectors;
 public class AuthorizationHandler implements HttpHandler {
 
     private final Gson gson = new Gson();
-    private final AuthorizationService authorizationService;
+    private final IAuthorizationService authorizationService;
 
     public AuthorizationHandler() {
-        this.authorizationService = new AuthorizationService();
+        this.authorizationService = ConfigService.getInstance().getAuthorizationService();
     }
 
     @Override
     public void handle(HttpExchange exchange) throws IOException {
         if (!"POST".equalsIgnoreCase(exchange.getRequestMethod())) {
-            exchange.sendResponseHeaders(405, -1); // Method Not Allowed
+            exchange.sendResponseHeaders(405, -1);
             return;
         }
 

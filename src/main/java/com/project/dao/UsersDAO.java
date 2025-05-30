@@ -6,7 +6,7 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
-public class UsersDAO {
+public class UsersDAO implements IUsersDAO {
     private final String dbURL;
     private final String dbUser;
     private final String dbPassword;
@@ -18,16 +18,19 @@ public class UsersDAO {
         this.dbPassword = dbPassword;
     }
 
+    @Override
     public void connect() throws SQLException {
         connection = DriverManager.getConnection(dbURL, dbUser, dbPassword);
     }
 
+    @Override
     public void close() throws SQLException {
         if (connection != null && !connection.isClosed()) {
             connection.close();
         }
     }
 
+    @Override
     public boolean addUser(User user) {
         String sql = "INSERT INTO `user` (name, surname, nickname, email, birthday, password) VALUES (?, ?, ?, ?, ?, ?)";
         try (PreparedStatement stmt = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
@@ -52,6 +55,7 @@ public class UsersDAO {
         return false;
     }
 
+    @Override
     public boolean updateUser(User user) {
         String sql = "UPDATE `user` SET name = ?, surname = ?, nickname = ?, email = ?, birthday = ?, password = ? WHERE userId = ?";
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
@@ -69,6 +73,7 @@ public class UsersDAO {
         }
     }
 
+    @Override
     public boolean deleteUser(int userId) {
         String sql = "DELETE FROM `user` WHERE userId = ?";
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
@@ -80,6 +85,7 @@ public class UsersDAO {
         }
     }
 
+    @Override
     public User getUserWithId(int userId) throws SQLException {
         String sql = "SELECT * FROM `user` WHERE userId = ?";
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
@@ -101,6 +107,7 @@ public class UsersDAO {
         return null;
     }
 
+    @Override
     public User getUserByEmail(String email) throws SQLException {
         String sql = "SELECT * FROM `user` WHERE email = ?";
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
@@ -122,6 +129,7 @@ public class UsersDAO {
         return null;
     }
 
+    @Override
     public List<User> getAllUsers() throws SQLException {
         String sql = "SELECT * FROM `user`";
         List<User> list = new ArrayList<>();

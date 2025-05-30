@@ -1,6 +1,6 @@
 package com.project.server;
 
-import com.project.utils.Config;
+import com.project.config.ConfigProperties;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -19,7 +19,7 @@ public class Server {
 
     public void runServer() {
         try {
-            serverSocket = new ServerSocket(Config.getLOCAL_SERVER_PORT());
+            serverSocket = new ServerSocket(ConfigProperties.getLOCAL_SERVER_PORT());
             System.out.println("[SERVER]: Server started, waiting for clients...");
             while (running) {
                 try {

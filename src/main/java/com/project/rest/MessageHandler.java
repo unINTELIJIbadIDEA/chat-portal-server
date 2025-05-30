@@ -2,9 +2,11 @@ package com.project.rest;
 
 import com.google.gson.*;
 import com.project.adapters.LocalDateTimeAdapter;
+import com.project.config.ConfigService;
 import com.project.models.message.Message;
 import com.project.models.message.MessageRequest;
 import com.project.server.ApiServer;
+import com.project.services.IMessageService;
 import com.project.services.MessageService;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
@@ -20,19 +22,20 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 public class MessageHandler implements HttpHandler {
+    private final Gson gson;
 
-    Gson gson = new GsonBuilder()
-            .registerTypeAdapter(LocalDateTime.class, new LocalDateTimeAdapter())
-            .create();
+    private final IMessageService messageService;
 
+    public MessageHandler() {
+        this.gson = new GsonBuilder()
+                .registerTypeAdapter(LocalDateTime.class, new LocalDateTimeAdapter())
+                .create();
 
-    private final MessageService messageService = new MessageService();
+        this.messageService = ConfigService.getInstance().getMessageService();
+    }
 
     @Override
     public void handle(HttpExchange exchange) throws IOException {
-
-
-
         String contextPath = exchange.getHttpContext().getPath();
         String fullPath = exchange.getRequestURI().getPath();
         String relativePath = fullPath.substring(contextPath.length());
@@ -75,6 +78,7 @@ public class MessageHandler implements HttpHandler {
         } else {
             exchange.sendResponseHeaders(404, -1);
         }
+        exchange.close();
     }
 
 

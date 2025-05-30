@@ -1,8 +1,10 @@
 package com.project.rest;
 
 import com.google.gson.Gson;
+import com.project.config.ConfigService;
 import com.project.server.ApiServer;
 import com.project.services.ConversationService;
+import com.project.services.IConversationService;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 
@@ -16,7 +18,11 @@ import java.util.Map;
 
 public class ConversationHandler implements HttpHandler {
     private final Gson gson = new Gson();
-    private final ConversationService service = new ConversationService();
+    private final IConversationService service;
+
+    public ConversationHandler() {
+        this.service = ConfigService.getInstance().getConversationService();
+    }
 
     @Override
     public void handle(HttpExchange exchange) throws IOException {
