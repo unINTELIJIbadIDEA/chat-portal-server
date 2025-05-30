@@ -12,27 +12,20 @@ public class BattleshipClientHandler implements Runnable {
     private ObjectOutputStream out;
     private String currentGameId;
     private int playerId;
+    private volatile boolean isRunning = true;
 
     public BattleshipClientHandler(Socket socket, BattleshipServer server) throws IOException {
         this.socket = socket;
         this.server = server;
+        this.isRunning = true; // Ustaw na początku
 
         try {
-            // DODAJ opóźnienie i flush
             System.out.println("[BATTLESHIP CLIENT]: Initializing streams...");
-
-            // Najpierw OutputStream z flush
             this.out = new ObjectOutputStream(socket.getOutputStream());
             this.out.flush();
-
-            // Krótkie opóźnienie
             Thread.sleep(100);
-
-            // Potem InputStream
             this.in = new ObjectInputStream(socket.getInputStream());
-
             System.out.println("[BATTLESHIP CLIENT]: Streams initialized successfully");
-
         } catch (Exception e) {
             System.err.println("[BATTLESHIP CLIENT]: Stream initialization failed: " + e.getMessage());
             e.printStackTrace();
@@ -43,7 +36,7 @@ public class BattleshipClientHandler implements Runnable {
     @Override
     public void run() {
         try {
-            while (!socket.isClosed() && !socket.isInputShutdown()) {
+            while (isRunning && !socket.isClosed() && !socket.isInputShutdown()) {
                 try {
                     System.out.println("[BATTLESHIP CLIENT]: Waiting for message...");
                     BattleshipMessage message = (BattleshipMessage) in.readObject();
@@ -57,7 +50,6 @@ public class BattleshipClientHandler implements Runnable {
                     break;
                 } catch (StreamCorruptedException e) {
                     System.err.println("[BATTLESHIP CLIENT]: Stream corrupted: " + e.getMessage());
-                    System.err.println("[BATTLESHIP CLIENT]: This may be caused by proxy/tunnel interference");
                     break;
                 } catch (IOException e) {
                     System.err.println("[BATTLESHIP CLIENT]: IO Error: " + e.getMessage());
@@ -92,27 +84,44 @@ public class BattleshipClientHandler implements Runnable {
 
     public void sendMessage(BattleshipMessage message) {
         try {
-            if (out != null) {
+            if (out != null && isConnected()) {
                 System.out.println("[BATTLESHIP CLIENT]: Sending message: " + message.getType());
                 out.writeObject(message);
                 out.flush();
                 System.out.println("[BATTLESHIP CLIENT]: Message sent successfully");
+            } else {
+                System.err.println("[BATTLESHIP CLIENT]: Cannot send message - not connected");
             }
         } catch (IOException e) {
             System.err.println("[BATTLESHIP CLIENT]: Error sending message: " + e.getMessage());
+            cleanup();
         }
     }
 
-    private void cleanup() {
+    public boolean isConnected() {
+        return isRunning &&
+                socket != null &&
+                !socket.isClosed() &&
+                !socket.isInputShutdown() &&
+                !socket.isOutputShutdown();
+    }
+
+    public void cleanup() {
+        isRunning = false;
+
         if (currentGameId != null && playerId != 0) {
             server.removePlayerFromGame(currentGameId, playerId);
         }
+
         try {
             if (in != null) in.close();
             if (out != null) out.close();
-            socket.close();
+            if (socket != null && !socket.isClosed()) socket.close();
         } catch (IOException e) {
             System.err.println("[BATTLESHIP CLIENT]: Error closing socket: " + e.getMessage());
         }
+
+        System.out.println("[BATTLESHIP CLIENT]: Cleanup completed for player: " + playerId);
     }
+
 }
