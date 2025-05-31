@@ -102,4 +102,12 @@ public class BattleshipGame implements Serializable {
     public int getWinner() { return winner; }
     public Map<Integer, GameBoard> getPlayerBoards() { return playerBoards; }
     public Map<Integer, Boolean> getPlayersReady() { return playersReady; }
+
+    //Setters
+    public void setState(GameState state) {
+        this.state = state;
+    }
+    public void setCurrentPlayer(int currentPlayer) {
+        this.currentPlayer = currentPlayer;
+    }
 }

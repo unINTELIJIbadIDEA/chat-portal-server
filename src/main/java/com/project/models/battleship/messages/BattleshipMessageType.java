@@ -7,5 +7,6 @@ public enum BattleshipMessageType {
     GAME_UPDATE,
     GAME_STATE_CHANGED,
     SHOT_RESULT,
+    PLAYER_READY,
     ERROR
 }
