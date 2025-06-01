@@ -53,17 +53,23 @@ public class GameBoard implements Serializable {
         int endX = horizontal ? startX + ship.getLength() - 1 : startX;
         int endY = horizontal ? startY : startY + ship.getLength() - 1;
 
-        // Czy statek miescci się w planszy?
+        // Debug
+        System.out.println("[GAMEBOARD]: Checking placement - start(" + startX + "," + startY + ") end(" + endX + "," + endY + ") horizontal=" + horizontal);
+
+        // Czy statek mieści się w planszy?
         if (endX >= BOARD_SIZE || endY >= BOARD_SIZE || startX < 0 || startY < 0) {
+            System.out.println("[GAMEBOARD]: Ship out of bounds!");
             return false;
         }
 
-        // Czy komórki są już zajęte?
-        for (int x = Math.max(0, startX - 1); x <= Math.min(BOARD_SIZE - 1, endX + 1); x++) {
-            for (int y = Math.max(0, startY - 1); y <= Math.min(BOARD_SIZE - 1, endY + 1); y++) {
-                if (board[x][y].hasShip()) {
-                    return false;
-                }
+        // Sprawdź tylko komórki gdzie będzie statek (nie sprawdzaj otoczenia podczas stawiania)
+        for (int i = 0; i < ship.getLength(); i++) {
+            int x = horizontal ? startX + i : startX;
+            int y = horizontal ? startY : startY + i;
+
+            if (board[x][y].hasShip()) {
+                System.out.println("[GAMEBOARD]: Cell (" + x + "," + y + ") already occupied!");
+                return false;
             }
         }
 
