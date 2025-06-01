@@ -268,6 +268,15 @@ public class BattleshipGameService {
         }
     }
 
+    public BattleshipGameInfo getGameInfoDirect(String gameId) throws SQLException {
+        try {
+            dao.connect();
+            return dao.getGameInfo(gameId);
+        } finally {
+            dao.close();
+        }
+    }
+
     public List<BattleshipGameInfo> getUserGames(int userId) throws SQLException {
         try {
             dao.connect();

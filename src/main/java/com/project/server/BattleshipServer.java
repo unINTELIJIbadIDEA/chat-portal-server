@@ -242,25 +242,40 @@ public class BattleshipServer {
         System.out.println("[BATTLESHIP SERVER]: === PLAYER READY ===");
         System.out.println("[BATTLESHIP SERVER]: Player " + message.getPlayerId() + " is ready in game " + gameId);
 
-        // Użyj nowej metody setPlayerReady
-        boolean ready = game.setPlayerReady(message.getPlayerId());
-
-        if (!ready) {
-            System.err.println("[BATTLESHIP SERVER]: Failed to set player ready");
+        // Sprawdź czy gracz ma wszystkie statki
+        GameBoard playerBoard = game.getPlayerBoards().get(message.getPlayerId());
+        if (playerBoard == null) {
+            System.err.println("[BATTLESHIP SERVER]: Player board not found for player " + message.getPlayerId());
             return;
         }
 
-        // Sprawdź stan gry po ustawieniu gotowości
-        System.out.println("[BATTLESHIP SERVER]: Game state after ready: " + game.getState());
-        System.out.println("[BATTLESHIP SERVER]: Current player: " + game.getCurrentPlayer());
+        if (!playerBoard.allShipsPlaced()) {
+            System.err.println("[BATTLESHIP SERVER]: Player " + message.getPlayerId() +
+                    " is not ready - not all ships placed!");
+            return;
+        }
 
-        // Wyślij update do wszystkich graczy
-        GameUpdateMessage updateMessage = new GameUpdateMessage(game);
-        broadcastToGame(gameId, updateMessage);
+        // Oznacz gracza jako gotowego
+        game.getPlayersReady().put(message.getPlayerId(), true);
+        System.out.println("[BATTLESHIP SERVER]: Player " + message.getPlayerId() + " marked as ready");
+        System.out.println("[BATTLESHIP SERVER]: Players ready status: " + game.getPlayersReady());
 
-        // Jeśli gra się rozpoczęła, wyślij dodatkowy update
-        if (game.getState() == GameState.PLAYING) {
-            System.out.println("[BATTLESHIP SERVER]: === GAME STARTED ===");
+        // Sprawdź czy wszyscy są gotowi
+        boolean allReady = game.getPlayersReady().size() == 2 &&
+                game.getPlayersReady().values().stream().allMatch(ready -> ready);
+
+        if (allReady) {
+            System.out.println("[BATTLESHIP SERVER]: All players ready! Starting game...");
+
+            // Zmień stan gry na PLAYING
+            game.setState(GameState.PLAYING);
+
+            // Ustaw pierwszego gracza
+            if (game.getCurrentPlayer() == -1) {
+                int firstPlayer = game.getPlayerBoards().keySet().iterator().next();
+                game.setCurrentPlayer(firstPlayer);
+                System.out.println("[BATTLESHIP SERVER]: First player set to: " + firstPlayer);
+            }
 
             // Zaktualizuj bazę danych
             try {
@@ -269,15 +284,18 @@ public class BattleshipServer {
             } catch (Exception e) {
                 System.err.println("[BATTLESHIP SERVER]: Failed to update database: " + e.getMessage());
             }
+        }
 
-            // Wyślij kilka razy update żeby upewnić się że klienci otrzymali
+        // Wyślij update do wszystkich graczy
+        GameUpdateMessage updateMessage = new GameUpdateMessage(game);
+        broadcastToGame(gameId, updateMessage);
+
+        // Jeśli gra się rozpoczęła, wyślij dodatkowy update po małym opóźnieniu
+        if (game.getState() == GameState.PLAYING) {
             new Thread(() -> {
                 try {
-                    for (int i = 0; i < 3; i++) {
-                        Thread.sleep(200);
-                        broadcastToGame(gameId, updateMessage);
-                        System.out.println("[BATTLESHIP SERVER]: Sent game start update #" + (i + 1));
-                    }
+                    Thread.sleep(200);
+                    broadcastToGame(gameId, updateMessage);
                     broadcastGameStateChange(gameId, GameState.PLAYING);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
@@ -358,19 +376,69 @@ public class BattleshipServer {
         System.out.println("[BATTLESHIP SERVER]: Shot result " + result + " for player " + message.getPlayerId() +
                 " at (" + message.getX() + "," + message.getY() + ") in game " + gameId);
 
-        // Wyślij wynik strzału
+        // Wyślij wynik strzału do wszystkich graczy
         broadcastToGame(gameId, new ShotResultMessage(message.getPlayerId(), gameId, result, message.getX(), message.getY()));
 
         // Wyślij zaktualizowany stan gry
         broadcastToGame(gameId, new GameUpdateMessage(game));
 
-        // Jeśli gra się skończyła, zaktualizuje status w bazie
+        // Jeśli gra się skończyła
         if (result == ShotResult.GAME_OVER) {
+            System.out.println("[BATTLESHIP SERVER]: === GAME FINISHED ===");
+            System.out.println("[BATTLESHIP SERVER]: Winner: " + message.getPlayerId() + " in game " + gameId);
+
             try {
+                // Zaktualizuj status w bazie danych
                 gameService.updateGameStatus(gameId, "FINISHED", message.getPlayerId());
+                System.out.println("[BATTLESHIP SERVER]: Database updated - game finished, winner: " + message.getPlayerId());
+
+                // Wyślij powiadomienie na czat o zakończeniu gry
+                notifyChatAboutGameEnd(gameId, message.getPlayerId());
+
             } catch (Exception e) {
                 System.err.println("[BATTLESHIP SERVER]: Failed to update game status: " + e.getMessage());
             }
+        }
+    }
+
+    private void notifyChatAboutGameEnd(String gameId, int winnerId) {
+        try {
+            // Pobierz informacje o grze z bazy
+            BattleshipGameInfo gameInfo = gameService.getGameInfoDirect(gameId);
+            if (gameInfo == null) return;
+
+            String chatId = gameInfo.getChatId();
+
+            // Wyślij powiadomienie przez połączenie TCP
+            java.net.Socket notificationSocket = new java.net.Socket("localhost", Config.getLOCAL_SERVER_PORT());
+
+            java.io.ObjectOutputStream out = new java.io.ObjectOutputStream(notificationSocket.getOutputStream());
+            out.flush();
+
+            // Wiadomość dołączenia do pokoju (jako zwycięzca)
+            String token = ApiServer.getTokenManager().generateToken(String.valueOf(winnerId));
+            com.project.models.message.ClientMessage joinMessage =
+                    new com.project.models.message.ClientMessage("/join " + chatId, chatId, token);
+            out.writeObject(joinMessage);
+            out.flush();
+
+            Thread.sleep(100);
+
+            // Wiadomość o zakończeniu gry
+            String gameEndMessage = "🎉 Gra w statki zakończona! Wygrał gracz " + winnerId + " 🏆";
+            com.project.models.message.ClientMessage endMessage =
+                    new com.project.models.message.ClientMessage(gameEndMessage, chatId, token);
+            out.writeObject(endMessage);
+            out.flush();
+
+            out.close();
+            notificationSocket.close();
+
+            System.out.println("[BATTLESHIP SERVER]: Game end notification sent to chat: " + chatId);
+
+        } catch (Exception e) {
+            System.err.println("[BATTLESHIP SERVER]: Failed to notify chat about game end: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 
