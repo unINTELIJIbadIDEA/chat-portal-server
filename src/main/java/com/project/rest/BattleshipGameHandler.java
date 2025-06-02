@@ -13,6 +13,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
+import java.util.List;
 import java.util.Map;
 
 public class BattleshipGameHandler implements HttpHandler {
@@ -47,6 +48,9 @@ public class BattleshipGameHandler implements HttpHandler {
                     } else if (pathParts.length == 4 && pathParts[3].equals("join") && exchange.getRequestMethod().equalsIgnoreCase("POST")) {
                         // POST /api/battleship/chat/{chatId}/join - dołącz do gry w czacie
                         handleJoinChatGame(exchange, userId, chatId);
+                    } else if (pathParts.length == 4 && pathParts[3].equals("resume") && exchange.getRequestMethod().equalsIgnoreCase("POST")) {
+                        // POST /api/battleship/chat/{chatId}/resume - wznów pauzowaną grę
+                        handleResumeGame(exchange, userId, chatId);
                     } else {
                         exchange.sendResponseHeaders(404, -1);
                     }
@@ -361,6 +365,54 @@ public class BattleshipGameHandler implements HttpHandler {
         } catch (Exception e) {
             System.err.println("Failed to notify chat about game: " + e.getMessage());
             e.printStackTrace();
+        }
+    }
+
+    // DODAJ TĘ METODĘ NA KOŃCU KLASY, PRZED OSTATNIM }
+
+    private void handleResumeGame(HttpExchange exchange, int userId, String chatId) throws IOException {
+        try {
+            System.out.println("[BATTLESHIP HANDLER]: Resume game request - User: " + userId + ", Chat: " + chatId);
+
+            // Sprawdź czy użytkownik należy do czatu
+            if (!gameService.isUserInChat(userId, chatId)) {
+                sendResponse(exchange, 403, "{\"error\": \"You are not a member of this chat\"}");
+                return;
+            }
+
+            // Znajdź pauzowaną grę użytkownika
+            List<BattleshipGameInfo> pausedGames = gameService.getPausedGamesForUser(userId);
+            BattleshipGameInfo gameToResume = pausedGames.stream()
+                    .filter(game -> game.getChatId().equals(chatId))
+                    .findFirst()
+                    .orElse(null);
+
+            if (gameToResume == null) {
+                sendResponse(exchange, 404, "{\"error\": \"No paused game found in this chat\"}");
+                return;
+            }
+
+            // Wznów grę
+            boolean resumed = gameService.resumeGame(gameToResume.getGameId());
+
+            if (resumed) {
+                Map<String, Object> response = Map.of(
+                        "gameId", gameToResume.getGameId(),
+                        "status", "PLAYING",
+                        "chatId", chatId,
+                        "gameName", gameToResume.getGameName(),
+                        "battleshipServerPort", gameService.getBattleshipServerPort(),
+                        "message", "Game resumed successfully",
+                        "action", "resumed"
+                );
+                sendResponse(exchange, 200, gson.toJson(response));
+            } else {
+                sendResponse(exchange, 500, "{\"error\": \"Failed to resume game\"}");
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            sendResponse(exchange, 500, "{\"error\": \"Internal server error: " + e.getMessage().replace("\"", "'") + "\"}");
         }
     }
 

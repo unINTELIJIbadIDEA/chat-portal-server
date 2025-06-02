@@ -92,7 +92,8 @@ public class BattleshipGameService {
                     .filter(game -> game.getChatId().equals(chatId))
                     .filter(game -> "WAITING".equals(game.getStatus()) ||
                             "READY".equals(game.getStatus()) ||
-                            "PLAYING".equals(game.getStatus()))
+                            "PLAYING".equals(game.getStatus()) ||
+                            "PAUSED".equals(game.getStatus()))
                     .findFirst()
                     .orElse(null);
 
@@ -334,5 +335,32 @@ public class BattleshipGameService {
 
     public int getBattleshipServerPort() {
         return Config.getBATTLESHIP_SERVER_PORT();
+    }
+
+    public boolean pauseGame(String gameId) throws SQLException {
+        try {
+            dao.connect();
+            return dao.pauseGame(gameId);
+        } finally {
+            dao.close();
+        }
+    }
+
+    public boolean resumeGame(String gameId) throws SQLException {
+        try {
+            dao.connect();
+            return dao.resumeGame(gameId);
+        } finally {
+            dao.close();
+        }
+    }
+
+    public List<BattleshipGameInfo> getPausedGamesForUser(int userId) throws SQLException {
+        try {
+            dao.connect();
+            return dao.getPausedGamesForUser(userId);
+        } finally {
+            dao.close();
+        }
     }
 }

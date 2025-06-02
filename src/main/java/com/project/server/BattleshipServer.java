@@ -8,8 +8,10 @@ import com.project.utils.Config;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.sql.SQLException;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -25,8 +27,13 @@ public class BattleshipServer {
 
     // Gry, ktore są aktywne
     private final Map<String, BattleshipGame> activeGames = new ConcurrentHashMap<>();
+    private final Map<String, BattleshipGame> pausedGameStates = new ConcurrentHashMap<>();
+    private final Map<String, Set<Integer>> activePlayersInGame = new ConcurrentHashMap<>();
     // Połączenia graczy w grach
     private final Map<String, Map<Integer, BattleshipClientHandler>> gameConnections = new ConcurrentHashMap<>();
+    private final Map<String, Map<Integer, Long>> lastPingTimes = new ConcurrentHashMap<>();
+    private static final long PING_INTERVAL = 2000; // 2 sekundy
+    private static final long PING_TIMEOUT = 8000; // 8 sekund timeout
 
     private BattleshipServer() {
         executor = Executors.newCachedThreadPool();
@@ -65,19 +72,21 @@ public class BattleshipServer {
     private void startConnectionMonitor() {
         connectionMonitor = new java.util.Timer("ConnectionMonitor", true);
 
-        // Sprawdzaj połączenia co 10 sekund
+        // Sprawdzaj połączenia co 5 sekund
         connectionMonitor.scheduleAtFixedRate(new java.util.TimerTask() {
             @Override
             public void run() {
                 try {
                     System.out.println("[BATTLESHIP SERVER]: Running connection check...");
                     checkConnections();
+                    sendPingToAllPlayers();
+                    checkPingTimeouts();
                     cleanupEmptyGames();
                 } catch (Exception e) {
                     System.err.println("[BATTLESHIP SERVER]: Error during connection check: " + e.getMessage());
                 }
             }
-        }, 10000, 10000); // Start po 10s, powtarzaj co 10s
+        }, 2000, 2000); // ZMIEŃ NA 2 sekundy zamiast 5
 
         System.out.println("[BATTLESHIP SERVER]: Connection monitor started");
     }
@@ -153,11 +162,32 @@ public class BattleshipServer {
         // Dodaj połączenie gracza
         connections.put(playerId, handler);
         System.out.println("[BATTLESHIP SERVER]: Player " + playerId + " connected to game " + gameId);
-        System.out.println("[BATTLESHIP SERVER]: Total connections for game: " + connections.size());
 
-        // Pobierz lub utwórz grę
+        // Dodaj do aktywnych graczy
+        activePlayersInGame.computeIfAbsent(gameId, k -> ConcurrentHashMap.newKeySet()).add(playerId);
+
+        // Zainicjalizuj ping tracking
+        lastPingTimes.computeIfAbsent(gameId, k -> new ConcurrentHashMap<>())
+                .put(playerId, System.currentTimeMillis());
+
+        System.out.println("[BATTLESHIP SERVER]: Ping tracking initialized for player " + playerId);
+
+        // Sprawdź czy to rejoin do pauzowanej gry
+        try {
+            if (gameService.getGameInfoDirect(gameId) != null &&
+                    "PAUSED".equals(gameService.getGameInfoDirect(gameId).getStatus())) {
+
+                System.out.println("[BATTLESHIP SERVER]: Player rejoining paused game: " + gameId);
+                handleGameRejoin(gameId, playerId, handler);
+                return;
+            }
+        } catch (SQLException e) {
+            System.err.println("[BATTLESHIP SERVER]: Error checking game status: " + e.getMessage());
+        }
+
+        // Pobierz lub utwórz grę (normalne flow)
         BattleshipGame game = activeGames.computeIfAbsent(
-                gameId, k -> new BattleshipGame(gameId)
+                gameId, k -> restoreOrCreateGame(gameId)
         );
 
         // Dodaj gracza do gry
@@ -165,33 +195,13 @@ public class BattleshipServer {
         System.out.println("[BATTLESHIP SERVER]: Player " + playerId +
                 (added ? " successfully added" : " already in game or game full") + " to game " + gameId);
 
-        System.out.println("[BATTLESHIP SERVER]: Current game state: " + game.getState());
-        System.out.println("[BATTLESHIP SERVER]: Players in game: " + game.getPlayerBoards().keySet());
-        System.out.println("[BATTLESHIP SERVER]: Players ready: " + game.getPlayersReady());
-
-        // KRYTYCZNE: Zawsze wyślij update do WSZYSTKICH graczy
+        // Wyślij update
         GameUpdateMessage updateMessage = new GameUpdateMessage(game);
         broadcastToGame(gameId, updateMessage);
 
-        // NOWE: Sprawdź czy gra już jest w trakcie (rejoin)
-        if (game.getState() == GameState.PLAYING) {
-            System.out.println("[BATTLESHIP SERVER]: Player rejoining game in PLAYING state");
-            // Wyślij dodatkowy update z opóźnieniem
-            new Thread(() -> {
-                try {
-                    Thread.sleep(500);
-                    broadcastToGame(gameId, updateMessage);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-            }).start();
-        }
-        // Jeśli stan gry zmienił się na SHIP_PLACEMENT
-        else if (game.getState() == GameState.SHIP_PLACEMENT) {
+        if (game.getState() == GameState.SHIP_PLACEMENT) {
             broadcastGameStateChange(gameId, game.getState());
         }
-
-        System.out.println("[BATTLESHIP SERVER]: === CONNECTION HANDLING COMPLETE ===");
     }
 
     private void broadcastGameStateChange(String gameId, GameState newState) {
@@ -496,13 +506,29 @@ public class BattleshipServer {
     }
 
     public void removePlayerFromGame(String gameId, int playerId) {
+        System.out.println("[BATTLESHIP SERVER]: === REMOVING PLAYER FROM GAME ===");
+        System.out.println("[BATTLESHIP SERVER]: Removing player " + playerId + " from game " + gameId);
+
+        // Obsłuż rozłączenie gracza
+        handlePlayerDisconnection(gameId, playerId);
+
         Map<Integer, BattleshipClientHandler> connections = gameConnections.get(gameId);
         if (connections != null) {
             connections.remove(playerId);
+
+            // Nie usuwaj gry natychmiast - może być wznowiona
             if (connections.isEmpty()) {
-                activeGames.remove(gameId);
-                gameConnections.remove(gameId);
-                System.out.println("[BATTLESHIP SERVER]: Game " + gameId + " removed - no players left");
+                // Sprawdź czy gra może być wznowiona w przyszłości
+                BattleshipGame game = activeGames.get(gameId);
+                if (game != null && (game.getState() == GameState.PLAYING || game.getState() == GameState.PAUSED)) {
+                    System.out.println("[BATTLESHIP SERVER]: Keeping game " + gameId + " for potential rejoin");
+                    // Nie usuwaj activeGames.remove(gameId) - zostaw dla rejoin
+                } else {
+                    // Usuń tylko jeśli gra nie była w trakcie
+                    activeGames.remove(gameId);
+                    gameConnections.remove(gameId);
+                    System.out.println("[BATTLESHIP SERVER]: Game " + gameId + " removed - no players left and not in progress");
+                }
             }
         }
     }
@@ -561,6 +587,166 @@ public class BattleshipServer {
                 boolean active = handler != null && handler.isRunning();
                 System.out.println("[BATTLESHIP SERVER]: Player " + playerId + " - handler active: " + active);
             });
+        }
+    }
+
+    private BattleshipGame restoreOrCreateGame(String gameId) {
+        // Sprawdź czy jest zapisany stan gry
+        if (pausedGameStates.containsKey(gameId)) {
+            System.out.println("[BATTLESHIP SERVER]: Restoring saved game state for: " + gameId);
+            return pausedGameStates.get(gameId);
+        }
+
+        // Utwórz nową grę
+        System.out.println("[BATTLESHIP SERVER]: Creating new game: " + gameId);
+        return new BattleshipGame(gameId);
+    }
+
+    private void handleGameRejoin(String gameId, int playerId, BattleshipClientHandler handler) {
+        System.out.println("[BATTLESHIP SERVER]: === GAME REJOIN ===");
+
+        // Przywróć zapisaną grę
+        BattleshipGame game = pausedGameStates.get(gameId);
+        if (game != null) {
+            activeGames.put(gameId, game);
+
+            // Sprawdź czy wszyscy gracze są z powrotem
+            Set<Integer> activePlayer = activePlayersInGame.get(gameId);
+            Set<Integer> gamePlayers = game.getPlayerBoards().keySet();
+
+            if (activePlayer != null && activePlayer.containsAll(gamePlayers)) {
+                System.out.println("[BATTLESHIP SERVER]: All players reconnected, resuming game");
+
+                // Wznów grę w bazie danych
+                try {
+                    gameService.resumeGame(gameId);
+                    game.setState(GameState.PLAYING);
+                    pausedGameStates.remove(gameId);
+                } catch (SQLException e) {
+                    System.err.println("[BATTLESHIP SERVER]: Error resuming game: " + e.getMessage());
+                }
+            }
+
+            // Wyślij aktualny stan gry
+            GameUpdateMessage updateMessage = new GameUpdateMessage(game);
+            broadcastToGame(gameId, updateMessage);
+        }
+    }
+
+    private void handlePlayerDisconnection(String gameId, int playerId) {
+        System.out.println("[BATTLESHIP SERVER]: === PLAYER DISCONNECTION ===");
+        System.out.println("[BATTLESHIP SERVER]: Player " + playerId + " disconnected from game " + gameId);
+
+        // Usuń z aktywnych graczy
+        Set<Integer> activePlayers = activePlayersInGame.get(gameId);
+        if (activePlayers != null) {
+            activePlayers.remove(playerId);
+
+            BattleshipGame game = activeGames.get(gameId);
+            if (game != null && game.getState() == GameState.PLAYING) {
+                // Jeśli gra była w trakcie, zapauzuj ją
+                System.out.println("[BATTLESHIP SERVER]: Pausing game due to player disconnection");
+
+                // Zapisz stan gry
+                pausedGameStates.put(gameId, game);
+
+                // Zapauzuj w bazie danych
+                try {
+                    gameService.pauseGame(gameId);
+                    game.setState(GameState.PAUSED); // Dodaj PAUSED do GameState enum
+                } catch (SQLException e) {
+                    System.err.println("[BATTLESHIP SERVER]: Error pausing game: " + e.getMessage());
+                }
+
+                // Powiadom pozostałych graczy
+                broadcastToGame(gameId, new GameUpdateMessage(game));
+            }
+        }
+    }
+
+    // DODAJ TE METODY PRZED metodą stopServer():
+
+    private void sendPingToAllPlayers() {
+        long currentTime = System.currentTimeMillis();
+
+        for (Map.Entry<String, Map<Integer, BattleshipClientHandler>> gameEntry : gameConnections.entrySet()) {
+            String gameId = gameEntry.getKey();
+            Map<Integer, BattleshipClientHandler> connections = gameEntry.getValue();
+
+            for (Map.Entry<Integer, BattleshipClientHandler> playerEntry : connections.entrySet()) {
+                int playerId = playerEntry.getKey();
+                BattleshipClientHandler handler = playerEntry.getValue();
+
+                if (handler != null && handler.isConnected()) {
+                    // Wyślij ping (GameUpdate jako ping)
+                    BattleshipGame game = activeGames.get(gameId);
+                    if (game != null) {
+                        try {
+                            handler.sendMessage(new GameUpdateMessage(game));
+
+                            // Zaktualizuj czas ostatniego ping
+                            lastPingTimes.computeIfAbsent(gameId, k -> new ConcurrentHashMap<>())
+                                    .put(playerId, currentTime);
+
+                        } catch (Exception e) {
+                            System.err.println("[BATTLESHIP SERVER]: Failed to send ping to player " + playerId + ": " + e.getMessage());
+                            // Oznacz jako rozłączonego
+                            markPlayerAsDisconnected(gameId, playerId);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private void checkPingTimeouts() {
+        long currentTime = System.currentTimeMillis();
+
+        for (Map.Entry<String, Map<Integer, Long>> gameEntry : lastPingTimes.entrySet()) {
+            String gameId = gameEntry.getKey();
+            Map<Integer, Long> playerPings = gameEntry.getValue();
+
+            for (Map.Entry<Integer, Long> playerEntry : playerPings.entrySet()) {
+                int playerId = playerEntry.getKey();
+                long lastPing = playerEntry.getValue();
+
+                if (currentTime - lastPing > PING_TIMEOUT) {
+                    System.out.println("[BATTLESHIP SERVER]: Player " + playerId + " in game " + gameId + " timed out");
+                    markPlayerAsDisconnected(gameId, playerId);
+                }
+            }
+        }
+    }
+
+    private void markPlayerAsDisconnected(String gameId, int playerId) {
+        System.out.println("[BATTLESHIP SERVER]: === MARKING PLAYER AS DISCONNECTED ===");
+        System.out.println("[BATTLESHIP SERVER]: Player " + playerId + " in game " + gameId);
+
+        // Usuń z połączeń
+        Map<Integer, BattleshipClientHandler> connections = gameConnections.get(gameId);
+        if (connections != null) {
+            BattleshipClientHandler handler = connections.remove(playerId);
+            if (handler != null) {
+                try {
+                    if (!handler.isConnected()) {
+                        System.out.println("[BATTLESHIP SERVER]: Handler already disconnected, closing gracefully");
+                    }
+                } catch (Exception e) {
+                    // Ignoruj błędy przy sprawdzaniu połączenia
+                }
+            }
+        }
+
+        // Obsłuż rozłączenie
+        handlePlayerDisconnection(gameId, playerId);
+
+        // Usuń z ping timers
+        Map<Integer, Long> gamePings = lastPingTimes.get(gameId);
+        if (gamePings != null) {
+            gamePings.remove(playerId);
+            if (gamePings.isEmpty()) {
+                lastPingTimes.remove(gameId);
+            }
         }
     }
 

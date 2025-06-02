@@ -5,6 +5,8 @@ import com.project.models.battleship.messages.*;
 import java.io.*;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class BattleshipClientHandler implements Runnable {
     private final Socket socket;
@@ -14,6 +16,8 @@ public class BattleshipClientHandler implements Runnable {
     private String currentGameId;
     private int playerId;
     private volatile boolean running = true;
+
+
 
     public BattleshipClientHandler(Socket socket, BattleshipServer server) throws IOException {
         this.socket = socket;
@@ -43,30 +47,46 @@ public class BattleshipClientHandler implements Runnable {
 
     @Override
     public void run() {
+        System.out.println("[BATTLESHIP CLIENT HANDLER]: Handler started for player " + playerId);
+
         try {
             while (running && !socket.isClosed() && !socket.isInputShutdown()) {
                 try {
-                    System.out.println("[BATTLESHIP CLIENT HANDLER]: Waiting for message from player " + playerId + "...");
+                    // DODAJ SPRAWDZENIE CONNECTION STATUS
+                    if (!socket.isConnected()) {
+                        System.out.println("[BATTLESHIP CLIENT HANDLER]: Socket disconnected for player " + playerId);
+                        break;
+                    }
+
                     BattleshipMessage message = (BattleshipMessage) in.readObject();
                     System.out.println("[BATTLESHIP CLIENT HANDLER]: Received " + message.getType() + " from player " + playerId);
                     handleMessage(message);
+
                 } catch (SocketTimeoutException e) {
-                    // Timeout jest ok - kontynuuj
+                    // Sprawdź czy socket wciąż działa
+                    if (!socket.isConnected() || socket.isClosed()) {
+                        System.out.println("[BATTLESHIP CLIENT HANDLER]: Socket closed during timeout for player " + playerId);
+                        break;
+                    }
                     continue;
-                } catch (ClassNotFoundException e) {
-                    System.err.println("[BATTLESHIP CLIENT HANDLER]: Invalid message class: " + e.getMessage());
-                    break;
                 } catch (EOFException e) {
                     System.out.println("[BATTLESHIP CLIENT HANDLER]: Connection closed by client " + playerId);
                     break;
+                } catch (java.net.SocketException e) {
+                    System.out.println("[BATTLESHIP CLIENT HANDLER]: Socket exception for player " + playerId + ": " + e.getMessage());
+                    break;
                 } catch (IOException e) {
                     System.err.println("[BATTLESHIP CLIENT HANDLER]: IO Error for player " + playerId + ": " + e.getMessage());
+                    break;
+                } catch (ClassNotFoundException e) {
+                    System.err.println("[BATTLESHIP CLIENT HANDLER]: Invalid message class: " + e.getMessage());
                     break;
                 }
             }
         } catch (Exception e) {
             System.err.println("[BATTLESHIP CLIENT HANDLER]: Unexpected error for player " + playerId + ": " + e.getMessage());
         } finally {
+            System.out.println("[BATTLESHIP CLIENT HANDLER]: Handler ending for player " + playerId);
             cleanup();
         }
     }
@@ -121,17 +141,44 @@ public class BattleshipClientHandler implements Runnable {
 
     private void cleanup() {
         running = false;
+
+        System.out.println("[BATTLESHIP CLIENT HANDLER]: === CLEANUP START ===");
+        System.out.println("[BATTLESHIP CLIENT HANDLER]: Player " + playerId + " disconnecting from game " + currentGameId);
+
+        // KRYTYCZNE: Powiadom serwer o rozłączeniu PRZED zamknięciem połączeń
         if (currentGameId != null && playerId != 0) {
-            System.out.println("[BATTLESHIP CLIENT HANDLER]: Cleaning up player " + playerId + " from game " + currentGameId);
+            System.out.println("[BATTLESHIP CLIENT HANDLER]: Notifying server about player disconnection");
             server.removePlayerFromGame(currentGameId, playerId);
         }
+
         try {
-            if (in != null) in.close();
-            if (out != null) out.close();
-            if (socket != null && !socket.isClosed()) socket.close();
+            if (in != null) {
+                in.close();
+                System.out.println("[BATTLESHIP CLIENT HANDLER]: Input stream closed");
+            }
         } catch (IOException e) {
-            System.err.println("[BATTLESHIP CLIENT HANDLER]: Error during cleanup: " + e.getMessage());
+            System.err.println("[BATTLESHIP CLIENT HANDLER]: Error closing input stream: " + e.getMessage());
         }
+
+        try {
+            if (out != null) {
+                out.close();
+                System.out.println("[BATTLESHIP CLIENT HANDLER]: Output stream closed");
+            }
+        } catch (IOException e) {
+            System.err.println("[BATTLESHIP CLIENT HANDLER]: Error closing output stream: " + e.getMessage());
+        }
+
+        try {
+            if (socket != null && !socket.isClosed()) {
+                socket.close();
+                System.out.println("[BATTLESHIP CLIENT HANDLER]: Socket closed");
+            }
+        } catch (IOException e) {
+            System.err.println("[BATTLESHIP CLIENT HANDLER]: Error closing socket: " + e.getMessage());
+        }
+
+        System.out.println("[BATTLESHIP CLIENT HANDLER]: === CLEANUP COMPLETE ===");
     }
 
     public boolean isRunning() {

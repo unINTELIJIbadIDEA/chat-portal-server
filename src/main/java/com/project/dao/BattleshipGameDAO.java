@@ -271,4 +271,58 @@ public class BattleshipGameDAO {
 
         checkTableExists();
     }
+
+    // DODAJ TE METODY NA KOŃCU KLASY, PRZED OSTATNIM }
+
+    public boolean pauseGame(String gameId) throws SQLException {
+        validateConnection();
+
+        String sql = "UPDATE battleship_games SET status = 'PAUSED' WHERE game_id = ? AND status = 'PLAYING'";
+        try (PreparedStatement stmt = connection.prepareStatement(sql)) {
+            stmt.setString(1, gameId);
+            return stmt.executeUpdate() > 0;
+        }
+    }
+
+    public boolean resumeGame(String gameId) throws SQLException {
+        validateConnection();
+
+        String sql = "UPDATE battleship_games SET status = 'PLAYING' WHERE game_id = ? AND status = 'PAUSED'";
+        try (PreparedStatement stmt = connection.prepareStatement(sql)) {
+            stmt.setString(1, gameId);
+            return stmt.executeUpdate() > 0;
+        }
+    }
+
+    public boolean isGamePaused(String gameId) throws SQLException {
+        validateConnection();
+
+        String sql = "SELECT status FROM battleship_games WHERE game_id = ?";
+        try (PreparedStatement stmt = connection.prepareStatement(sql)) {
+            stmt.setString(1, gameId);
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) {
+                return "PAUSED".equals(rs.getString("status"));
+            }
+        }
+        return false;
+    }
+
+    public List<BattleshipGameInfo> getPausedGamesForUser(int userId) throws SQLException {
+        validateConnection();
+
+        String sql = "SELECT * FROM battleship_games WHERE (player1_id = ? OR player2_id = ?) AND status = 'PAUSED' ORDER BY created_at DESC";
+        List<BattleshipGameInfo> games = new ArrayList<>();
+
+        try (PreparedStatement stmt = connection.prepareStatement(sql)) {
+            stmt.setInt(1, userId);
+            stmt.setInt(2, userId);
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    games.add(mapResultSetToGameInfo(rs));
+                }
+            }
+        }
+        return games;
+    }
 }
