@@ -59,7 +59,7 @@
                 server.start();
                 logger.info("[API SERVER]: Server started on port " + PORT);
             } catch (IOException e) {
-                logger.warning("[API SERVER]: Failed to start: " + e.getMessage());
+                logger.severe("[API SERVER]: Failed to start: " + e.getMessage());
             }
         }
 
