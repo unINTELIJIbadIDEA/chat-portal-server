@@ -141,4 +141,30 @@ public class UsersDAO {
         }
         return list;
     }
+
+    public String getUserNameById(int userId) throws SQLException {
+        String sql = "SELECT CONCAT(name, ' ', surname) as fullName FROM `user` WHERE userId = ?";
+        try (PreparedStatement stmt = connection.prepareStatement(sql)) {
+            stmt.setInt(1, userId);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getString("fullName");
+                }
+            }
+        }
+        return "Nieznany użytkownik";
+    }
+
+    public String getUserNicknameById(int userId) throws SQLException {
+        String sql = "SELECT nickname FROM `user` WHERE userId = ?";
+        try (PreparedStatement stmt = connection.prepareStatement(sql)) {
+            stmt.setInt(1, userId);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getString("nickname");
+                }
+            }
+        }
+        return "Nieznany";
+    }
 }

@@ -5,6 +5,7 @@ import com.project.dao.ConversationDAO;
 import com.project.models.battleship.BattleshipGameInfo;
 import com.project.server.BattleshipServer;
 import com.project.utils.Config;
+import com.project.dao.UsersDAO;
 
 import java.sql.SQLException;
 import java.util.List;
@@ -13,6 +14,12 @@ import java.util.UUID;
 
 public class BattleshipGameService {
     private final BattleshipGameDAO dao = new BattleshipGameDAO(
+            Config.getDbUrl(),
+            Config.getDbUsername(),
+            Config.getDbPassword()
+    );
+
+    private final UsersDAO usersDAO = new UsersDAO(
             Config.getDbUrl(),
             Config.getDbUsername(),
             Config.getDbPassword()
@@ -334,5 +341,41 @@ public class BattleshipGameService {
 
     public int getBattleshipServerPort() {
         return Config.getBATTLESHIP_SERVER_PORT();
+    }
+
+    public String getUserName(int userId) throws SQLException {
+        try {
+            usersDAO.connect();
+            return usersDAO.getUserNameById(userId);
+        } finally {
+            usersDAO.close();
+        }
+    }
+
+    public String getUserNickname(int userId) throws SQLException {
+        try {
+            usersDAO.connect();
+            return usersDAO.getUserNicknameById(userId);
+        } finally {
+            usersDAO.close();
+        }
+    }
+
+    public boolean pauseGame(String gameId) throws SQLException {
+        try {
+            dao.connect();
+            return dao.setGamePaused(gameId);
+        } finally {
+            dao.close();
+        }
+    }
+
+    public boolean resumeGame(String gameId) throws SQLException {
+        try {
+            dao.connect();
+            return dao.setGameActive(gameId);
+        } finally {
+            dao.close();
+        }
     }
 }

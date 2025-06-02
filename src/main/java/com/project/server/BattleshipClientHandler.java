@@ -1,6 +1,8 @@
 package com.project.server;
 
+import com.project.models.battleship.BattleshipGameInfo;
 import com.project.models.battleship.messages.*;
+import com.project.services.BattleshipGameService;
 
 import java.io.*;
 import java.net.Socket;
@@ -122,7 +124,25 @@ public class BattleshipClientHandler implements Runnable {
     private void cleanup() {
         running = false;
         if (currentGameId != null && playerId != 0) {
-            System.out.println("[BATTLESHIP CLIENT HANDLER]: Cleaning up player " + playerId + " from game " + currentGameId);
+            System.out.println("[BATTLESHIP CLIENT HANDLER]: Player " + playerId + " left game " + currentGameId);
+
+            try {
+                // Zamiast usuwać gracza, zmień status gry na paused
+                BattleshipGameService gameService = new BattleshipGameService();
+                BattleshipGameInfo gameInfo = gameService.getGameInfoDirect(currentGameId);
+
+                if (gameInfo != null && !"FINISHED".equals(gameInfo.getStatus())) {
+                    // Jeśli gra nie jest skończona, ustaw ją jako wstrzymaną
+                    gameService.pauseGame(currentGameId);
+                    System.out.println("[BATTLESHIP CLIENT HANDLER]: Game " + currentGameId + " paused due to player disconnect");
+
+                    // Powiadom pozostałego gracza
+                    server.notifyPlayerLeft(currentGameId, playerId);
+                }
+            } catch (Exception e) {
+                System.err.println("[BATTLESHIP CLIENT HANDLER]: Error pausing game: " + e.getMessage());
+            }
+
             server.removePlayerFromGame(currentGameId, playerId);
         }
         try {
