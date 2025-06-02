@@ -47,7 +47,7 @@ public class ServerLauncher {
             try {
                 tcpServer.runServer();
             } catch (Exception e) {
-                System.err.println("TCP Server crashed: " + e.getMessage());
+                logger.severe("TCP Server crashed: " + e.getMessage());
             }
         });
         executor.submit(() -> {
@@ -64,7 +64,7 @@ public class ServerLauncher {
             try {
                 battleshipServer.runServer();
             } catch (Exception e) {
-                System.err.println("Battleship Server crashed: " + e.getMessage());
+                logger.severe("Battleship Server crashed: " + e.getMessage());
             }
         });
 
