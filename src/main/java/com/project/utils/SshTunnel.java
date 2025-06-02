@@ -1,11 +1,28 @@
 package com.project.utils;
 
+import com.project.ServerLauncher;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.logging.FileHandler;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import java.util.logging.SimpleFormatter;
 
 public class SshTunnel {
+    private static final Logger logger = Logger.getLogger(ServerLauncher.class.getName());
 
+    static {
+        try {
+            FileHandler fileHandler = new FileHandler("logs/tunnel.log", true);
+            fileHandler.setFormatter(new SimpleFormatter());
+            logger.addHandler(fileHandler);
+            logger.setLevel(Level.INFO);
+        } catch (Exception e) {
+            System.err.println("Failed to initialize logger: " + e.getMessage());
+        }
+    }
     private final int localPort;
     private final int remotePort;
     private Process process;
@@ -26,7 +43,6 @@ public class SshTunnel {
         builder.redirectErrorStream(true);
 
         try {
-            System.out.println("[SSH TUNNEL] Opening tunnel: remote " + remotePort + " → local " + localPort);
             process = builder.start();
 
             new Thread(() -> {
@@ -34,29 +50,24 @@ public class SshTunnel {
                         new InputStreamReader(process.getInputStream()))) {
                     String line;
                     while ((line = reader.readLine()) != null) {
-                        System.out.println("[SSH TUNNEL " + remotePort + "] " + line);
-
-                        // SZUKAJ tej linii w logach!
-                        if (line.contains("Forwarding HTTP traffic from")) {
-                            System.out.println("✅ TUNNEL READY: " + remotePort);
-                        }
+                        logger.info("[SSH TUNNEL] " + line);
                     }
                 } catch (IOException e) {
-                    System.err.println("[SSH TUNNEL] Error reading output: " + e.getMessage());
+                    logger.warning("[SSH TUNNEL] Error reading output: " + e.getMessage());
                 }
             }).start();
 
-            System.out.println("[SSH TUNNEL] Tunnel process started: remote " + remotePort + " → local " + localPort);
+            logger.info("[SSH TUNNEL] Tunnel opened: remote " + remotePort + " → local " + localPort);
 
         } catch (IOException e) {
-            System.err.println("[SSH TUNNEL] Failed to open tunnel: " + e.getMessage());
+            logger.warning("[SSH TUNNEL] Failed to open tunnel: " + e.getMessage());
         }
     }
 
     public void closeTunnel() {
         if (process != null && process.isAlive()) {
             process.destroy();
-            System.out.println("[SSH TUNNEL] Tunnel closed.");
+            logger.info("[SSH TUNNEL] Tunnel closed.");
         }
     }
 }

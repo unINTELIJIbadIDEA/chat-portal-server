@@ -10,7 +10,7 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
-public class PostsDAO {
+public class PostsDAO implements IPostsDAO{
 
     private final String dbURL;
     private final String dbName;
@@ -23,14 +23,17 @@ public class PostsDAO {
         this.dbPassword = dbPassword;
     }
 
+    @Override
     public void connect() throws SQLException {
         connection = DriverManager.getConnection(dbURL, dbName, dbPassword);
     }
 
+    @Override
     public void close() throws SQLException {
         connection.close();
     }
 
+    @Override
     public String getAllPosts() {
         String query = "SELECT posts.postId, posts.userId, user.name, user.surname, posts.content, posts.date FROM posts INNER JOIN user ON user.userId = posts.userId;";
         List<UsersPost> postList = new ArrayList<>();
@@ -58,6 +61,7 @@ public class PostsDAO {
         }
     }
 
+    @Override
     public String getAllPostsExcludingId(int excludeId) {
         String query = "SELECT posts.postId, posts.userId, user.name, user.surname, posts.content, posts.date FROM posts INNER JOIN user ON user.userId = posts.userId WHERE posts.userId != ?;";
         List<UsersPost> postList = new ArrayList<>();
@@ -84,6 +88,7 @@ public class PostsDAO {
         }
     }
 
+    @Override
     public String getAllPostsWithUserId(int userId) {
         String query = "SELECT posts.postId, posts.userId, user.name, user.surname, posts.content, posts.date FROM posts INNER JOIN user ON user.userId = posts.userId WHERE posts.userId = ?;";
         List<UsersPost> postList = new ArrayList<>();
@@ -110,6 +115,7 @@ public class PostsDAO {
         }
     }
 
+    @Override
     public boolean deletePostWithId(int deletionId) {
         String query = "DELETE FROM posts WHERE posts.postId = ?";
         try {
@@ -122,6 +128,7 @@ public class PostsDAO {
         }
     }
 
+    @Override
     public boolean addPost(Post newPost) {
         String query = "INSERT INTO posts (userId, content, date) VALUES(?, ?, ?)";
         try {
@@ -137,6 +144,7 @@ public class PostsDAO {
         }
     }
 
+    @Override
     public boolean updatePost(int postId, String newContent) throws SQLException {
         String query = "UPDATE posts SET content = ? WHERE postId = ?";
         try (PreparedStatement stmt = connection.prepareStatement(query)) {

@@ -4,8 +4,9 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonParseException;
 import com.project.adapters.UserAdapter;
+import com.project.config.ConfigService;
 import com.project.models.User;
-import com.project.services.UsersService;
+import com.project.services.IUsersService;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 
@@ -17,10 +18,16 @@ import java.sql.SQLException;
 import java.util.List;
 
 public class UsersHandler implements HttpHandler {
-    private final Gson gson = new GsonBuilder()
-            .registerTypeAdapter(User.class, new UserAdapter())
-            .create();
-    private final UsersService service = new UsersService();
+    private final Gson gson;
+    private final IUsersService service;
+
+    public UsersHandler() {
+        this.gson = new GsonBuilder()
+                .registerTypeAdapter(User.class, new UserAdapter())
+                .create();
+
+        this.service = ConfigService.getInstance().getUsersService();
+    }
 
     @Override
     public void handle(HttpExchange exchange) throws IOException {

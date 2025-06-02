@@ -4,7 +4,7 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
-public class ConversationDAO {
+public class ConversationDAO implements IConversationDAO {
     private final String dbURL;
     private final String dbName;
     private final String dbPassword;
@@ -16,16 +16,19 @@ public class ConversationDAO {
         this.dbPassword = dbPassword;
     }
 
+    @Override
     public void connect() throws SQLException {
         connection = DriverManager.getConnection(dbURL, dbName, dbPassword);
     }
 
+    @Override
     public void close() throws SQLException {
         if (connection != null && !connection.isClosed()) {
             connection.close();
         }
     }
 
+    @Override
     public boolean createConversation(String roomId, String password) throws SQLException {
         String query = "INSERT INTO conversations (roomId, password) VALUES (?, ?)";
         try (PreparedStatement stmt = connection.prepareStatement(query)) {
@@ -35,6 +38,7 @@ public class ConversationDAO {
         }
     }
 
+    @Override
     public boolean addUserToConversation(int userId, String roomId) throws SQLException {
         String query = "INSERT INTO usersconversations (userId, conversationId) VALUES (?, ?)";
         try (PreparedStatement stmt = connection.prepareStatement(query)) {
@@ -44,6 +48,7 @@ public class ConversationDAO {
         }
     }
 
+    @Override
     public boolean removeUserFromConversation(int userId, String roomId) throws SQLException {
         String query = "DELETE FROM usersconversations WHERE userId = ? AND conversationId = ?";
         try (PreparedStatement stmt = connection.prepareStatement(query)) {
@@ -53,6 +58,7 @@ public class ConversationDAO {
         }
     }
 
+    @Override
     public String getPasswordForRoom(String roomId) throws SQLException {
         String query = "SELECT password FROM conversations WHERE roomId = ?";
         try (PreparedStatement stmt = connection.prepareStatement(query)) {
@@ -62,6 +68,7 @@ public class ConversationDAO {
         }
     }
 
+    @Override
     public List<String> getUserConversations(int userId) throws SQLException {
         List<String> conversations = new ArrayList<>();
         String query = "SELECT conversationId FROM usersConversations WHERE userId = ?";
@@ -75,6 +82,7 @@ public class ConversationDAO {
         return conversations;
     }
 
+    @Override
     public boolean conversationExists(String roomId) throws SQLException {
         String query = "SELECT 1 FROM conversations WHERE roomId = ?";
         try (PreparedStatement stmt = connection.prepareStatement(query)) {

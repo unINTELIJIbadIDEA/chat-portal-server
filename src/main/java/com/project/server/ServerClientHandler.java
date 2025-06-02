@@ -12,8 +12,22 @@ import java.net.URL;
 import java.time.LocalDateTime;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.logging.*;
 
 public class ServerClientHandler implements Callable<Void> {
+
+    private static final Logger logger = Logger.getLogger(ServerClientHandler.class.getName());
+
+    static {
+        try {
+            FileHandler fileHandler = new FileHandler("logs/clienthandler.log", true);
+            fileHandler.setFormatter(new SimpleFormatter());
+            logger.addHandler(fileHandler);
+            logger.setLevel(Level.INFO);
+        } catch (IOException e) {
+            System.err.println("Logger init failed: " + e.getMessage());
+        }
+    }
 
     private static final AtomicInteger messageId = new AtomicInteger(0);
 
@@ -37,32 +51,23 @@ public class ServerClientHandler implements Callable<Void> {
         String roomId = clientMessage.chatId();
         String token = clientMessage.token();
 
-        System.out.println("=== JOIN REQUEST DEBUG ===");
-        System.out.println("Room ID: " + roomId);
-        System.out.println("Token: " + (token != null ? token.substring(0, Math.min(10, token.length())) + "..." : "null"));
-        System.out.println("Client address: " + socket.getRemoteSocketAddress());
-
         Integer userId = ApiServer.getTokenManager().validateTokenAndGetUserId(token);
         if (userId == null) {
-            System.err.println("INVALID TOKEN for room: " + roomId);
+            logger.warning("Invalid token during join attempt from: " + socket.getRemoteSocketAddress());
             sendMessage(new Message(0, roomId, 0, "Invalid or expired token", LocalDateTime.now()));
             return;
         }
 
-        System.out.println("User ID from token: " + userId);
-
         ServerSessionManager sessionManager = ServerSessionManager.getInstance();
         if (!sessionManager.sessionExists(roomId)) {
-            System.out.println("Creating new session for room: " + roomId);
             sessionManager.createSession(roomId);
-        } else {
-            System.out.println("Session already exists for room: " + roomId);
+            logger.info("New room created: " + roomId);
         }
 
         sessionManager.addClientToSession(roomId, this);
         this.roomId = roomId;
 
-        System.out.println("Successfully added client to room: " + roomId);
+        logger.info("Client joined room: " + roomId + " (userId: " + userId + ")");
         sendMessage(new Message(0, roomId, userId, "Joined room: " + roomId, LocalDateTime.now()));
     }
 
@@ -116,6 +121,7 @@ public class ServerClientHandler implements Callable<Void> {
 
                 Integer userId = ApiServer.getTokenManager().validateTokenAndGetUserId(clientMessage.token());
                 if (userId == null) {
+                    logger.warning("Invalid token from: " + socket.getRemoteSocketAddress());
                     sendMessage(new Message(0, clientMessage.chatId(), 0, "Invalid or expired token", LocalDateTime.now()));
                     continue;
                 }
@@ -133,16 +139,19 @@ public class ServerClientHandler implements Callable<Void> {
                             .getRoom(clientMessage.chatId())
                             .broadcast(messageToSend);
 
+                    logger.info("Broadcasted message in room " + clientMessage.chatId() + " from user " + userId);
                     sendMessageToApi(clientMessage.token(), messageToSend);
                 } else {
+                    logger.warning("Attempt to message non-existing room: " + clientMessage.chatId());
                     sendMessage(new Message(0, clientMessage.chatId(), userId, "Room does not exist. Please join first.", LocalDateTime.now()));
                 }
             }
         } catch (IOException | ClassNotFoundException e) {
-            System.out.println("[SYSTEM]: " + e.getMessage());
+            logger.warning("Exception in handler: " + e.getMessage());
         } finally {
             if (roomId != null) {
                 ServerSessionManager.getInstance().removeClientFromSession(roomId, this);
+                logger.info("Client disconnected from room: " + roomId);
             }
             try {
                 socket.close();
@@ -158,12 +167,13 @@ public class ServerClientHandler implements Callable<Void> {
             sendMessage(message);
         } catch (IOException e) {
             ServerSessionManager.getInstance().removeClientFromSession(roomId, this);
+            logger.warning("Failed to update client in room: " + roomId);
         }
     }
 
     private void sendMessageToApi(String token, Message message) {
         try {
-            URL url = new java.net.URL("http://" + Config.getHOST_SERVER() + ":" + Config.getLOCAL_API_PORT() + "/api/messages");
+            URL url = new java.net.URL("http://" + ConfigProperties.getHOST_SERVER() + ":" + ConfigProperties.getLOCAL_API_PORT() + "/api/messages");
             HttpURLConnection conn = (java.net.HttpURLConnection) url.openConnection();
             conn.setRequestMethod("POST");
             conn.setRequestProperty("Content-Type", "application/json; charset=UTF-8");

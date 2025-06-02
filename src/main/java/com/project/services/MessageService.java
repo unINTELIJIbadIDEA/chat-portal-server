@@ -1,20 +1,21 @@
 package com.project.services;
 
-import com.project.dao.MessageDAO;
+import com.project.config.ConfigDAO;
+import com.project.dao.IMessegeDAO;
 import com.project.models.message.Message;
-import com.project.utils.Config;
 
 import java.sql.SQLException;
 import java.util.List;
 
-public class MessageService {
+public class MessageService implements IMessageService {
 
-    private final MessageDAO messageDAO;
+    private final IMessegeDAO messageDAO;
 
     public MessageService() {
-        this.messageDAO = new MessageDAO(Config.getDbUrl(), Config.getDbUsername(), Config.getDbPassword());
+        this.messageDAO = ConfigDAO.getInstance().getMessageDAO();
     }
 
+    @Override
     public boolean addMessage(Message newMessage) throws SQLException {
 
 
@@ -23,13 +24,13 @@ public class MessageService {
         }
         try {
             messageDAO.connect();
-            boolean result = messageDAO.addMessage(newMessage);
-            return result;
+            return messageDAO.addMessage(newMessage);
         } finally {
             messageDAO.close();
         }
     }
 
+    @Override
     public boolean updateMessage(Message updatedMessage) throws SQLException {
         try {
             messageDAO.connect();
@@ -40,6 +41,7 @@ public class MessageService {
 
     }
 
+    @Override
     public boolean deleteMessage(int messageId) throws SQLException {
         try{
             messageDAO.connect();
@@ -49,6 +51,7 @@ public class MessageService {
         }
     }
 
+    @Override
     public String getMessageById(int messageId) throws SQLException {
         try {
             messageDAO.connect();
@@ -58,6 +61,7 @@ public class MessageService {
         }
     }
 
+    @Override
     public List<Message> getMessagesByChatId(String chatId) throws SQLException {
         try{
             messageDAO.connect();
@@ -67,6 +71,7 @@ public class MessageService {
         }
     }
 
+    @Override
     public List<Message> getAllMessages() throws SQLException {
         try {
             messageDAO.connect();
