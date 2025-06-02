@@ -8,6 +8,7 @@ import com.project.utils.Config;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
@@ -376,8 +377,29 @@ public class BattleshipServer {
         System.out.println("[BATTLESHIP SERVER]: Shot result " + result + " for player " + message.getPlayerId() +
                 " at (" + message.getX() + "," + message.getY() + ") in game " + gameId);
 
-        // Wyślij wynik strzału do wszystkich graczy
+        // Wyślij wynik strzału
         broadcastToGame(gameId, new ShotResultMessage(message.getPlayerId(), gameId, result, message.getX(), message.getY()));
+
+        // NOWE: Jeśli statek został zatopiony, wyślij pozycje całego statku
+        if (result == ShotResult.SUNK || result == ShotResult.GAME_OVER) {
+            // Znajdź przeciwnika
+            int opponentId = game.getPlayerBoards().keySet().stream()
+                    .filter(id -> id != message.getPlayerId())
+                    .findFirst()
+                    .orElse(-1);
+
+            if (opponentId != -1) {
+                GameBoard opponentBoard = game.getPlayerBoards().get(opponentId);
+                Ship sunkShip = opponentBoard.getSunkShipAt(message.getX(), message.getY());
+
+                if (sunkShip != null) {
+                    List<Position> shipPositions = opponentBoard.getSunkShipPositions(sunkShip);
+                    ShipSunkMessage shipSunkMsg = new ShipSunkMessage(message.getPlayerId(), gameId, shipPositions);
+                    broadcastToGame(gameId, shipSunkMsg);
+                    System.out.println("[BATTLESHIP SERVER]: Sent sunk ship positions: " + shipPositions.size() + " cells");
+                }
+            }
+        }
 
         // Wyślij zaktualizowany stan gry
         broadcastToGame(gameId, new GameUpdateMessage(game));

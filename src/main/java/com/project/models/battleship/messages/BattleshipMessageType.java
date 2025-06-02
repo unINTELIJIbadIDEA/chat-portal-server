@@ -8,5 +8,6 @@ public enum BattleshipMessageType {
     GAME_STATE_CHANGED,
     SHOT_RESULT,
     PLAYER_READY,
+    SHIP_SUNK,
     ERROR
 }

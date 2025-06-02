@@ -81,6 +81,15 @@ public class GameBoard implements Serializable {
         return true;
     }
 
+    public List<Position> getSunkShipPositions(Ship sunkShip) {
+        for (PlacedShip placedShip : ships) {
+            if (placedShip.getShip() == sunkShip) {
+                return new ArrayList<>(placedShip.getPositions());
+            }
+        }
+        return new ArrayList<>();
+    }
+
     public ShotResult receiveShot(int x, int y) {
         if (x < 0 || x >= BOARD_SIZE || y < 0 || y >= BOARD_SIZE) {
             return ShotResult.INVALID;
@@ -108,6 +117,17 @@ public class GameBoard implements Serializable {
         }
 
         return ShotResult.MISS;
+    }
+
+    // NOWA METODA - zwraca zatopiony statek na pozycji
+    public Ship getSunkShipAt(int x, int y) {
+        if (x >= 0 && x < BOARD_SIZE && y >= 0 && y < BOARD_SIZE) {
+            Cell cell = board[x][y];
+            if (cell.hasShip() && cell.getShip().isSunk()) {
+                return cell.getShip();
+            }
+        }
+        return null;
     }
 
     private void markSurroundingCells(Ship sunkShip) {
