@@ -17,4 +17,8 @@ module com.project {
     opens com.project.models.message to com.google.gson;
     exports com.project.config;
     opens com.project.config to javafx.fxml;
+    opens com.project.models.battleship to com.google.gson;
+    opens com.project.models.battleship.messages to com.google.gson;
+    exports com.project.models.battleship;
+    exports com.project.models.battleship.messages;
 }

@@ -4,6 +4,7 @@ import com.project.server.ApiServer;
 import com.project.server.Server;
 import com.project.config.ConfigProperties;
 import com.project.utils.SshTunnel;
+import com.project.server.BattleshipServer;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -25,7 +26,7 @@ public class ServerLauncher {
     }
 
     public static void main(String[] args) {
-        ExecutorService executor = Executors.newFixedThreadPool(2, runnable -> {
+        ExecutorService executor = Executors.newFixedThreadPool(3, runnable -> {
             Thread thread = new Thread(runnable);
             thread.setDaemon(false);
             return thread;
@@ -33,19 +34,22 @@ public class ServerLauncher {
 
         var tcpServer = new Server();
         var apiServer = new ApiServer();
+        var battleshipServer = BattleshipServer.getInstance();
+
 
         var tcpTunnel = new SshTunnel(ConfigProperties.getREMOTE_SERVER_PORT(), ConfigProperties.getLOCAL_SERVER_PORT());
         var apiTunnel = new SshTunnel(ConfigProperties.getREMOTE_API_PORT(), ConfigProperties.getLOCAL_API_PORT());
+        var battleshipTunnel = new SshTunnel(ConfigProperties.getREMOTE_BATTLESHIP_PORT(), ConfigProperties.getBATTLESHIP_SERVER_PORT());
+
 
         executor.submit(() -> {
             Thread.currentThread().setName("TCP-Server-Thread");
             try {
                 tcpServer.runServer();
             } catch (Exception e) {
-                logger.severe("TCP Server crashed: " + e.getMessage());
+                System.err.println("TCP Server crashed: " + e.getMessage());
             }
         });
-
         executor.submit(() -> {
             Thread.currentThread().setName("API-Server-Thread");
             try {
@@ -55,8 +59,19 @@ public class ServerLauncher {
             }
         });
 
+        executor.submit(() -> {
+            Thread.currentThread().setName("Battleship-Server-Thread");
+            try {
+                battleshipServer.runServer();
+            } catch (Exception e) {
+                System.err.println("Battleship Server crashed: " + e.getMessage());
+            }
+        });
+
+
         apiTunnel.openTunnel();
         tcpTunnel.openTunnel();
+        battleshipTunnel.openTunnel();
         logger.info("Tunnels opened, servers running.");
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
@@ -65,6 +80,7 @@ public class ServerLauncher {
             try {
                 tcpServer.stopServer();
                 apiServer.stopServer();
+                battleshipServer.stopServer();
             } catch (Exception e) {
                 logger.warning("Error while stopping servers: " + e.getMessage());
             }
@@ -74,6 +90,7 @@ public class ServerLauncher {
 
             apiTunnel.closeTunnel();
             tcpTunnel.closeTunnel();
+            battleshipTunnel.closeTunnel();
             logger.info("Tunnels closed.");
         }));
     }
