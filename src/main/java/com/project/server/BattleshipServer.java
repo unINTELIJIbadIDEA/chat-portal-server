@@ -25,11 +25,11 @@ public class BattleshipServer {
     private final BattleshipGameService gameService = new BattleshipGameService();
     private java.util.Timer connectionMonitor;
 
-    // Gry, ktore są aktywne
+
     private final Map<String, BattleshipGame> activeGames = new ConcurrentHashMap<>();
     private final Map<String, BattleshipGame> pausedGameStates = new ConcurrentHashMap<>();
     private final Map<String, Set<Integer>> activePlayersInGame = new ConcurrentHashMap<>();
-    // Połączenia graczy w grach
+
     private final Map<String, Map<Integer, BattleshipClientHandler>> gameConnections = new ConcurrentHashMap<>();
     private final Map<String, Map<Integer, Long>> lastPingTimes = new ConcurrentHashMap<>();
     private static final long PING_INTERVAL = 2000; // 2 sekundy
@@ -48,7 +48,6 @@ public class BattleshipServer {
             serverSocket = new ServerSocket(Config.getBATTLESHIP_SERVER_PORT());
             System.out.println("[BATTLESHIP SERVER]: Server started on port " + Config.getBATTLESHIP_SERVER_PORT());
 
-            // DODAJ: Uruchom monitor połączeń
             startConnectionMonitor();
 
             while (running) {
@@ -86,7 +85,7 @@ public class BattleshipServer {
                     System.err.println("[BATTLESHIP SERVER]: Error during connection check: " + e.getMessage());
                 }
             }
-        }, 2000, 2000); // ZMIEŃ NA 2 sekundy zamiast 5
+        }, 2000, 2000);
 
         System.out.println("[BATTLESHIP SERVER]: Connection monitor started");
     }
@@ -108,7 +107,6 @@ public class BattleshipServer {
     public void stopServer() {
         running = false;
 
-        // DODAJ: Zatrzymaj monitor połączeń
         if (connectionMonitor != null) {
             connectionMonitor.cancel();
             System.out.println("[BATTLESHIP SERVER]: Connection monitor stopped");
@@ -185,7 +183,7 @@ public class BattleshipServer {
             System.err.println("[BATTLESHIP SERVER]: Error checking game status: " + e.getMessage());
         }
 
-        // Pobierz lub utwórz grę (normalne flow)
+        // Pobierz lub utwórz grę
         BattleshipGame game = activeGames.computeIfAbsent(
                 gameId, k -> restoreOrCreateGame(gameId)
         );
@@ -209,8 +207,6 @@ public class BattleshipServer {
 
         Map<Integer, BattleshipClientHandler> connections = gameConnections.get(gameId);
         if (connections != null) {
-            // Użyj dedykowanej wiadomości o zmianie stanu (jeśli istnieje)
-            // lub wyślij kolejny GameUpdate dla pewności
             BattleshipGame game = activeGames.get(gameId);
             if (game != null) {
                 GameUpdateMessage stateUpdate = new GameUpdateMessage(game);
@@ -240,7 +236,7 @@ public class BattleshipServer {
             case TAKE_SHOT:
                 handleTakeShot(gameId, game, (TakeShotMessage) message);
                 break;
-            case PLAYER_READY:  // NOWY CASE
+            case PLAYER_READY:
                 handlePlayerReady(gameId, game, (PlayerReadyMessage) message);
                 break;
             default:
@@ -278,17 +274,17 @@ public class BattleshipServer {
         if (allReady) {
             System.out.println("[BATTLESHIP SERVER]: All players ready! Starting game...");
 
-            // Zmień stan gry na PLAYING
+
             game.setState(GameState.PLAYING);
 
-            // Ustaw pierwszego gracza
+
             if (game.getCurrentPlayer() == -1) {
                 int firstPlayer = game.getPlayerBoards().keySet().iterator().next();
                 game.setCurrentPlayer(firstPlayer);
                 System.out.println("[BATTLESHIP SERVER]: First player set to: " + firstPlayer);
             }
 
-            // Zaktualizuj bazę danych
+
             try {
                 gameService.updateGameStatus(gameId, "PLAYING", null);
                 System.out.println("[BATTLESHIP SERVER]: Database updated to PLAYING status");
@@ -297,11 +293,11 @@ public class BattleshipServer {
             }
         }
 
-        // Wyślij update do wszystkich graczy
+
         GameUpdateMessage updateMessage = new GameUpdateMessage(game);
         broadcastToGame(gameId, updateMessage);
 
-        // Jeśli gra się rozpoczęła, wyślij dodatkowy update po małym opóźnieniu
+
         if (game.getState() == GameState.PLAYING) {
             new Thread(() -> {
                 try {
@@ -331,11 +327,11 @@ public class BattleshipServer {
         System.out.println("[BATTLESHIP SERVER]: Ship placement " + (placed ? "successful" : "failed"));
 
         if (placed) {
-            // Sprawdź stan gry
+
             System.out.println("[BATTLESHIP SERVER]: Current game state: " + game.getState());
             System.out.println("[BATTLESHIP SERVER]: Players ready: " + game.getPlayersReady());
 
-            // Pobierz planszę gracza
+
             GameBoard playerBoard = game.getPlayerBoards().get(message.getPlayerId());
             if (playerBoard != null) {
                 boolean allShipsPlaced = playerBoard.allShipsPlaced();
@@ -343,32 +339,31 @@ public class BattleshipServer {
                         " - all ships placed: " + allShipsPlaced);
             }
 
-            // Sprawdź czy wszyscy gracze są gotowi
+
             boolean allReady = game.getPlayersReady().values().stream()
                     .filter(ready -> ready != null)
                     .allMatch(ready -> ready);
             System.out.println("[BATTLESHIP SERVER]: All players ready: " + allReady);
 
-            // WAŻNE: Broadcast update do wszystkich graczy w tej grze
+
             GameUpdateMessage updateMessage = new GameUpdateMessage(game);
             broadcastToGame(gameId, updateMessage);
 
-            // Jeśli gra przeszła do stanu PLAYING
+
             if (game.getState() == GameState.PLAYING) {
                 System.out.println("[BATTLESHIP SERVER]: === GAME STARTING ===");
                 System.out.println("[BATTLESHIP SERVER]: Game " + gameId + " is now in PLAYING state!");
                 System.out.println("[BATTLESHIP SERVER]: Current player: " + game.getCurrentPlayer());
 
-                // Wyślij dodatkowy update żeby upewnić się że klienci otrzymali zmianę stanu
                 try {
-                    Thread.sleep(100); // Małe opóźnienie
+                    Thread.sleep(100);
                     broadcastToGame(gameId, updateMessage);
 
-                    // Zaktualizuj bazę danych
+
                     gameService.updateGameStatus(gameId, "PLAYING", null);
                     System.out.println("[BATTLESHIP SERVER]: Database updated to PLAYING status");
 
-                    // Wyślij specjalną wiadomość o rozpoczęciu gry
+
                     broadcastGameStateChange(gameId, GameState.PLAYING);
 
                 } catch (Exception e) {
@@ -377,7 +372,7 @@ public class BattleshipServer {
             }
         } else {
             System.err.println("[BATTLESHIP SERVER]: Failed to place ship for player " + message.getPlayerId());
-            // Możesz wysłać błąd do gracza
+
         }
     }
 
@@ -387,12 +382,11 @@ public class BattleshipServer {
         System.out.println("[BATTLESHIP SERVER]: Shot result " + result + " for player " + message.getPlayerId() +
                 " at (" + message.getX() + "," + message.getY() + ") in game " + gameId);
 
-        // Wyślij wynik strzału
         broadcastToGame(gameId, new ShotResultMessage(message.getPlayerId(), gameId, result, message.getX(), message.getY()));
 
-        // NOWE: Jeśli statek został zatopiony, wyślij pozycje całego statku
+
         if (result == ShotResult.SUNK || result == ShotResult.GAME_OVER) {
-            // Znajdź przeciwnika
+
             int opponentId = game.getPlayerBoards().keySet().stream()
                     .filter(id -> id != message.getPlayerId())
                     .findFirst()
@@ -411,20 +405,20 @@ public class BattleshipServer {
             }
         }
 
-        // Wyślij zaktualizowany stan gry
+
         broadcastToGame(gameId, new GameUpdateMessage(game));
 
-        // Jeśli gra się skończyła
+
         if (result == ShotResult.GAME_OVER) {
             System.out.println("[BATTLESHIP SERVER]: === GAME FINISHED ===");
             System.out.println("[BATTLESHIP SERVER]: Winner: " + message.getPlayerId() + " in game " + gameId);
 
             try {
-                // Zaktualizuj status w bazie danych
+
                 gameService.updateGameStatus(gameId, "FINISHED", message.getPlayerId());
                 System.out.println("[BATTLESHIP SERVER]: Database updated - game finished, winner: " + message.getPlayerId());
 
-                // Wyślij powiadomienie na czat o zakończeniu gry
+
                 notifyChatAboutGameEnd(gameId, message.getPlayerId());
 
             } catch (Exception e) {
@@ -435,19 +429,28 @@ public class BattleshipServer {
 
     private void notifyChatAboutGameEnd(String gameId, int winnerId) {
         try {
-            // Pobierz informacje o grze z bazy
+
             BattleshipGameInfo gameInfo = gameService.getGameInfoDirect(gameId);
             if (gameInfo == null) return;
 
             String chatId = gameInfo.getChatId();
 
-            // Wyślij powiadomienie przez połączenie TCP
+
+            String winnerNickname;
+            try {
+                winnerNickname = gameService.getUserNickname(winnerId);
+            } catch (SQLException e) {
+                System.err.println("[BATTLESHIP SERVER]: Error getting winner nickname: " + e.getMessage());
+                winnerNickname = "Gracz " + winnerId; // Fallback
+            }
+
+
             java.net.Socket notificationSocket = new java.net.Socket("localhost", Config.getLOCAL_SERVER_PORT());
 
             java.io.ObjectOutputStream out = new java.io.ObjectOutputStream(notificationSocket.getOutputStream());
             out.flush();
 
-            // Wiadomość dołączenia do pokoju (jako zwycięzca)
+
             String token = ApiServer.getTokenManager().generateToken(String.valueOf(winnerId));
             com.project.models.message.ClientMessage joinMessage =
                     new com.project.models.message.ClientMessage("/join " + chatId, chatId, token);
@@ -456,8 +459,8 @@ public class BattleshipServer {
 
             Thread.sleep(100);
 
-            // Wiadomość o zakończeniu gry
-            String gameEndMessage = "🎉 Gra w statki zakończona! Wygrał gracz " + winnerId + " 🏆";
+
+            String gameEndMessage = "🎉 Gra w statki zakończona! Wygrał " + winnerNickname + " 🏆";
             com.project.models.message.ClientMessage endMessage =
                     new com.project.models.message.ClientMessage(gameEndMessage, chatId, token);
             out.writeObject(endMessage);
@@ -466,7 +469,7 @@ public class BattleshipServer {
             out.close();
             notificationSocket.close();
 
-            System.out.println("[BATTLESHIP SERVER]: Game end notification sent to chat: " + chatId);
+            System.out.println("[BATTLESHIP SERVER]: Game end notification sent to chat: " + chatId + " (winner: " + winnerNickname + ")");
 
         } catch (Exception e) {
             System.err.println("[BATTLESHIP SERVER]: Failed to notify chat about game end: " + e.getMessage());
@@ -480,16 +483,14 @@ public class BattleshipServer {
             System.out.println("[BATTLESHIP SERVER]: Broadcasting " + message.getType() +
                     " to " + connections.size() + " players in game " + gameId);
 
-            // Wyślij do każdego gracza z małym opóźnieniem
             connections.forEach((playerId, handler) -> {
                 new Thread(() -> {
                     try {
-                        // Sprawdź czy handler jest aktywny
+
                         if (handler != null && handler.isRunning()) {
                             handler.sendMessage(message);
                             System.out.println("[BATTLESHIP SERVER]: Message sent to player " + playerId);
 
-                            // Małe opóźnienie między wysyłkami
                             Thread.sleep(50);
                         } else {
                             System.err.println("[BATTLESHIP SERVER]: Handler for player " + playerId + " is not active");
@@ -509,22 +510,21 @@ public class BattleshipServer {
         System.out.println("[BATTLESHIP SERVER]: === REMOVING PLAYER FROM GAME ===");
         System.out.println("[BATTLESHIP SERVER]: Removing player " + playerId + " from game " + gameId);
 
-        // Obsłuż rozłączenie gracza
         handlePlayerDisconnection(gameId, playerId);
 
         Map<Integer, BattleshipClientHandler> connections = gameConnections.get(gameId);
         if (connections != null) {
             connections.remove(playerId);
 
-            // Nie usuwaj gry natychmiast - może być wznowiona
+
             if (connections.isEmpty()) {
-                // Sprawdź czy gra może być wznowiona w przyszłości
+
                 BattleshipGame game = activeGames.get(gameId);
                 if (game != null && (game.getState() == GameState.PLAYING || game.getState() == GameState.PAUSED)) {
                     System.out.println("[BATTLESHIP SERVER]: Keeping game " + gameId + " for potential rejoin");
-                    // Nie usuwaj activeGames.remove(gameId) - zostaw dla rejoin
+
                 } else {
-                    // Usuń tylko jeśli gra nie była w trakcie
+
                     activeGames.remove(gameId);
                     gameConnections.remove(gameId);
                     System.out.println("[BATTLESHIP SERVER]: Game " + gameId + " removed - no players left and not in progress");
@@ -542,28 +542,26 @@ public class BattleshipServer {
 
             System.out.println("[BATTLESHIP SERVER]: Checking " + connections.size() + " connections for game: " + gameId);
 
-            // Usuń martwe połączenia
             connections.entrySet().removeIf(entry -> {
                 int playerId = entry.getKey();
                 BattleshipClientHandler handler = entry.getValue();
 
                 try {
-                    // Sprawdź czy handler jest żywy
                     if (handler == null || !handler.isConnected()) {
                         System.out.println("[BATTLESHIP SERVER]: Removing dead connection for player " + playerId + " in game " + gameId);
-                        return true; // Usuń połączenie
+                        return true;
                     }
 
                     // Wyślij ping (game update) żeby sprawdzić połączenie
                     BattleshipGame game = activeGames.get(gameId);
                     if (game != null) {
                         handler.sendMessage(new GameUpdateMessage(game));
-                        return false; // Połączenie działa
+                        return false;
                     }
 
                 } catch (Exception e) {
                     System.out.println("[BATTLESHIP SERVER]: Exception checking player " + playerId + ": " + e.getMessage());
-                    return true; // Usuń problematyczne połączenie
+                    return true;
                 }
 
                 return false;
@@ -591,13 +589,13 @@ public class BattleshipServer {
     }
 
     private BattleshipGame restoreOrCreateGame(String gameId) {
-        // Sprawdź czy jest zapisany stan gry
+
         if (pausedGameStates.containsKey(gameId)) {
             System.out.println("[BATTLESHIP SERVER]: Restoring saved game state for: " + gameId);
             return pausedGameStates.get(gameId);
         }
 
-        // Utwórz nową grę
+
         System.out.println("[BATTLESHIP SERVER]: Creating new game: " + gameId);
         return new BattleshipGame(gameId);
     }
@@ -605,19 +603,16 @@ public class BattleshipServer {
     private void handleGameRejoin(String gameId, int playerId, BattleshipClientHandler handler) {
         System.out.println("[BATTLESHIP SERVER]: === GAME REJOIN ===");
 
-        // Przywróć zapisaną grę
         BattleshipGame game = pausedGameStates.get(gameId);
         if (game != null) {
             activeGames.put(gameId, game);
 
-            // Sprawdź czy wszyscy gracze są z powrotem
             Set<Integer> activePlayer = activePlayersInGame.get(gameId);
             Set<Integer> gamePlayers = game.getPlayerBoards().keySet();
 
             if (activePlayer != null && activePlayer.containsAll(gamePlayers)) {
                 System.out.println("[BATTLESHIP SERVER]: All players reconnected, resuming game");
 
-                // Wznów grę w bazie danych
                 try {
                     gameService.resumeGame(gameId);
                     game.setState(GameState.PLAYING);
@@ -627,7 +622,6 @@ public class BattleshipServer {
                 }
             }
 
-            // Wyślij aktualny stan gry
             GameUpdateMessage updateMessage = new GameUpdateMessage(game);
             broadcastToGame(gameId, updateMessage);
         }
@@ -637,34 +631,24 @@ public class BattleshipServer {
         System.out.println("[BATTLESHIP SERVER]: === PLAYER DISCONNECTION ===");
         System.out.println("[BATTLESHIP SERVER]: Player " + playerId + " disconnected from game " + gameId);
 
-        // Usuń z aktywnych graczy
         Set<Integer> activePlayers = activePlayersInGame.get(gameId);
         if (activePlayers != null) {
             activePlayers.remove(playerId);
 
             BattleshipGame game = activeGames.get(gameId);
             if (game != null && game.getState() == GameState.PLAYING) {
-                // Jeśli gra była w trakcie, zapauzuj ją
                 System.out.println("[BATTLESHIP SERVER]: Pausing game due to player disconnection");
-
-                // Zapisz stan gry
                 pausedGameStates.put(gameId, game);
-
-                // Zapauzuj w bazie danych
                 try {
                     gameService.pauseGame(gameId);
                     game.setState(GameState.PAUSED); // Dodaj PAUSED do GameState enum
                 } catch (SQLException e) {
                     System.err.println("[BATTLESHIP SERVER]: Error pausing game: " + e.getMessage());
                 }
-
-                // Powiadom pozostałych graczy
                 broadcastToGame(gameId, new GameUpdateMessage(game));
             }
         }
     }
-
-    // DODAJ TE METODY PRZED metodą stopServer():
 
     private void sendPingToAllPlayers() {
         long currentTime = System.currentTimeMillis();
@@ -678,19 +662,17 @@ public class BattleshipServer {
                 BattleshipClientHandler handler = playerEntry.getValue();
 
                 if (handler != null && handler.isConnected()) {
-                    // Wyślij ping (GameUpdate jako ping)
                     BattleshipGame game = activeGames.get(gameId);
                     if (game != null) {
                         try {
                             handler.sendMessage(new GameUpdateMessage(game));
 
-                            // Zaktualizuj czas ostatniego ping
                             lastPingTimes.computeIfAbsent(gameId, k -> new ConcurrentHashMap<>())
                                     .put(playerId, currentTime);
 
                         } catch (Exception e) {
                             System.err.println("[BATTLESHIP SERVER]: Failed to send ping to player " + playerId + ": " + e.getMessage());
-                            // Oznacz jako rozłączonego
+
                             markPlayerAsDisconnected(gameId, playerId);
                         }
                     }
@@ -722,7 +704,6 @@ public class BattleshipServer {
         System.out.println("[BATTLESHIP SERVER]: === MARKING PLAYER AS DISCONNECTED ===");
         System.out.println("[BATTLESHIP SERVER]: Player " + playerId + " in game " + gameId);
 
-        // Usuń z połączeń
         Map<Integer, BattleshipClientHandler> connections = gameConnections.get(gameId);
         if (connections != null) {
             BattleshipClientHandler handler = connections.remove(playerId);
@@ -732,15 +713,12 @@ public class BattleshipServer {
                         System.out.println("[BATTLESHIP SERVER]: Handler already disconnected, closing gracefully");
                     }
                 } catch (Exception e) {
-                    // Ignoruj błędy przy sprawdzaniu połączenia
                 }
             }
         }
 
-        // Obsłuż rozłączenie
         handlePlayerDisconnection(gameId, playerId);
 
-        // Usuń z ping timers
         Map<Integer, Long> gamePings = lastPingTimes.get(gameId);
         if (gamePings != null) {
             gamePings.remove(playerId);

@@ -21,7 +21,7 @@ public class ServerLauncher {
         var apiServer = new ApiServer();
         var battleshipServer = BattleshipServer.getInstance();
 
-        // TUNELE - DODAJ battleshipTunnel
+
         var tcpTunnel = new SshTunnel(Config.getREMOTE_SERVER_PORT(), Config.getLOCAL_SERVER_PORT());
         var apiTunnel = new SshTunnel(Config.getREMOTE_API_PORT(), Config.getLOCAL_API_PORT());
         var battleshipTunnel = new SshTunnel(Config.getREMOTE_BATTLESHIP_PORT(), Config.getBATTLESHIP_SERVER_PORT());
@@ -53,7 +53,7 @@ public class ServerLauncher {
             }
         });
 
-        // OTWÓRZ TUNELE - DODAJ battleshipTunnel
+
         apiTunnel.openTunnel();
         tcpTunnel.openTunnel();
         battleshipTunnel.openTunnel();
@@ -72,7 +72,7 @@ public class ServerLauncher {
             executor.shutdown();
             System.out.println("Serwery zamknięte.");
 
-            // ZAMKNIJ TUNELE - DODAJ battleshipTunnel
+
             apiTunnel.closeTunnel();
             tcpTunnel.closeTunnel();
             battleshipTunnel.closeTunnel();

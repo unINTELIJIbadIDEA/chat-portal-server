@@ -5,8 +5,6 @@ import com.project.models.battleship.messages.*;
 import java.io.*;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 public class BattleshipClientHandler implements Runnable {
     private final Socket socket;
@@ -26,14 +24,11 @@ public class BattleshipClientHandler implements Runnable {
         try {
             System.out.println("[BATTLESHIP CLIENT HANDLER]: Initializing streams...");
 
-            // Najpierw OutputStream z flush
             this.out = new ObjectOutputStream(socket.getOutputStream());
             this.out.flush();
 
-            // Krótkie opóźnienie
             Thread.sleep(100);
 
-            // Potem InputStream
             this.in = new ObjectInputStream(socket.getInputStream());
 
             System.out.println("[BATTLESHIP CLIENT HANDLER]: Streams initialized successfully");
@@ -52,7 +47,7 @@ public class BattleshipClientHandler implements Runnable {
         try {
             while (running && !socket.isClosed() && !socket.isInputShutdown()) {
                 try {
-                    // DODAJ SPRAWDZENIE CONNECTION STATUS
+
                     if (!socket.isConnected()) {
                         System.out.println("[BATTLESHIP CLIENT HANDLER]: Socket disconnected for player " + playerId);
                         break;
@@ -63,7 +58,7 @@ public class BattleshipClientHandler implements Runnable {
                     handleMessage(message);
 
                 } catch (SocketTimeoutException e) {
-                    // Sprawdź czy socket wciąż działa
+
                     if (!socket.isConnected() || socket.isClosed()) {
                         System.out.println("[BATTLESHIP CLIENT HANDLER]: Socket closed during timeout for player " + playerId);
                         break;
@@ -119,7 +114,7 @@ public class BattleshipClientHandler implements Runnable {
                 System.out.println("[BATTLESHIP CLIENT HANDLER]: Sending " + message.getType() + " to player " + playerId);
                 out.writeObject(message);
                 out.flush();
-                out.reset(); // WAŻNE: Reset strumienia obiektów
+                out.reset();
                 System.out.println("[BATTLESHIP CLIENT HANDLER]: Message sent successfully to player " + playerId);
             } else {
                 System.err.println("[BATTLESHIP CLIENT HANDLER]: Cannot send message - handler not running or output stream null");
@@ -145,7 +140,6 @@ public class BattleshipClientHandler implements Runnable {
         System.out.println("[BATTLESHIP CLIENT HANDLER]: === CLEANUP START ===");
         System.out.println("[BATTLESHIP CLIENT HANDLER]: Player " + playerId + " disconnecting from game " + currentGameId);
 
-        // KRYTYCZNE: Powiadom serwer o rozłączeniu PRZED zamknięciem połączeń
         if (currentGameId != null && playerId != 0) {
             System.out.println("[BATTLESHIP CLIENT HANDLER]: Notifying server about player disconnection");
             server.removePlayerFromGame(currentGameId, playerId);

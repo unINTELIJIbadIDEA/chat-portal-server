@@ -51,8 +51,6 @@ public class BattleshipGameDAO {
             }
         }
     }
-
-    // WALIDACJA POŁĄCZENIA przed każdą operacją
     private void validateConnection() throws SQLException {
         if (connection == null) {
             throw new SQLException("Database connection is null - call connect() first");
@@ -213,8 +211,6 @@ public class BattleshipGameDAO {
         );
     }
 
-    // DODAJ DO ISTNIEJĄCEJ KLASY BattleshipGameDAO
-
     public boolean updateGameAfterPlayerLeave(String gameId, int newPlayer1Id) throws SQLException {
         validateConnection();
 
@@ -246,7 +242,6 @@ public class BattleshipGameDAO {
         }
     }
 
-    // Sprawdź czy tabela istnieje
     public boolean checkTableExists() throws SQLException {
         validateConnection();
 
@@ -272,7 +267,6 @@ public class BattleshipGameDAO {
         checkTableExists();
     }
 
-    // DODAJ TE METODY NA KOŃCU KLASY, PRZED OSTATNIM }
 
     public boolean pauseGame(String gameId) throws SQLException {
         validateConnection();

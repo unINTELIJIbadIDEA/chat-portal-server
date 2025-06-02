@@ -2,6 +2,8 @@ package com.project.services;
 
 import com.project.dao.BattleshipGameDAO;
 import com.project.dao.ConversationDAO;
+import com.project.dao.UsersDAO;
+import com.project.models.User;
 import com.project.models.battleship.BattleshipGameInfo;
 import com.project.server.BattleshipServer;
 import com.project.utils.Config;
@@ -41,8 +43,6 @@ public class BattleshipGameService {
             BattleshipGameInfo existingGame = getUserActiveGameInChatInternal(creatorId, chatId);
             if (existingGame != null) {
                 System.out.println("User " + creatorId + " already has active game: " + existingGame.getGameId());
-
-                // KRYTYCZNE: Upewnij się, że gra jest zarejestrowana na serwerze
                 BattleshipServer.getInstance().registerGame(existingGame.getGameId());
                 return existingGame.getGameId();
             }
@@ -80,11 +80,11 @@ public class BattleshipGameService {
         }
     }
 
-    // NOWA METODA - używa już otwartego połączenia
+
     private BattleshipGameInfo getUserActiveGameInChatInternal(int userId, String chatId) throws SQLException {
         System.out.println("Checking active games for user " + userId + " in chat " + chatId);
         try {
-            // UWAGA: Zakładamy że dao.connect() już zostało wywołane
+
             List<BattleshipGameInfo> userGames = dao.getUserGames(userId);
             System.out.println("Found " + userGames.size() + " games for user");
 
@@ -109,8 +109,6 @@ public class BattleshipGameService {
             throw e;
         }
     }
-
-    // PUBLICZNA METODA - zarządza własnymi połączeniami
     public BattleshipGameInfo getUserActiveGameInChat(int userId, String chatId) throws SQLException {
         try {
             dao.connect();
@@ -125,17 +123,13 @@ public class BattleshipGameService {
             dao.connect();
             System.out.println("[BATTLESHIP SERVICE]: Join request - Player: " + playerId + ", Chat: " + chatId);
 
-            // Sprawdź czy użytkownik już ma aktywną grę w tym czacie
             BattleshipGameInfo existingGame = getUserActiveGameInChatInternal(playerId, chatId);
             if (existingGame != null) {
                 System.out.println("[BATTLESHIP SERVICE]: User " + playerId + " already in game: " + existingGame.getGameId());
 
-                // KRYTYCZNE: Zarejestruj grę na serwerze jeśli nie jest
                 BattleshipServer.getInstance().registerGame(existingGame.getGameId());
                 return true;
             }
-
-            // Znajdź aktywną grę w czacie (WAITING lub READY status)
             System.out.println("[BATTLESHIP SERVICE]: Looking for active games in chat: " + chatId);
             List<BattleshipGameInfo> chatGames = dao.getChatGames(chatId);
             System.out.println("[BATTLESHIP SERVICE]: Found " + chatGames.size() + " games in chat");
@@ -146,10 +140,7 @@ public class BattleshipGameService {
                         " - Status: " + game.getStatus() +
                         " - Player1: " + game.getPlayer1Id() +
                         " - Player2: " + game.getPlayer2Id());
-
-                // Szukaj gry która jest WAITING i nie ma drugiego gracza
                 if ("WAITING".equals(game.getStatus()) && game.getPlayer2Id() == null) {
-                    // Sprawdź czy to nie jest gra tego samego gracza
                     if (game.getPlayer1Id() != playerId) {
                         availableGame = game;
                         break;
@@ -159,7 +150,7 @@ public class BattleshipGameService {
 
             if (availableGame == null) {
                 System.out.println("[BATTLESHIP SERVICE]: No available games found in chat");
-                return false; // Brak dostępnych gier w czacie
+                return false;
             }
 
             System.out.println("[BATTLESHIP SERVICE]: Found available game: " + availableGame.getGameId());
@@ -182,7 +173,6 @@ public class BattleshipGameService {
         }
     }
 
-    // NOWA METODA - opuść grę (gdy użytkownik się wylogowuje)
     public boolean leaveGame(int userId, String gameId) throws SQLException {
         try {
             dao.connect();
@@ -190,17 +180,15 @@ public class BattleshipGameService {
 
             if (gameInfo == null) return false;
 
-            // Jeśli gracz 1 opuszcza grę
+
             if (gameInfo.getPlayer1Id() == userId) {
                 if (gameInfo.getPlayer2Id() != null) {
-                    // Drugi gracz zostaje graczem 1
+
                     return dao.updateGameAfterPlayerLeave(gameId, gameInfo.getPlayer2Id());
                 } else {
-                    // Usuń grę całkowicie
                     return dao.deleteGame(gameId);
                 }
             }
-            // Jeśli gracz 2 opuszcza grę
             else if (gameInfo.getPlayer2Id() != null && gameInfo.getPlayer2Id() == userId) {
                 return dao.removePlayer2(gameId);
             }
@@ -247,13 +235,11 @@ public class BattleshipGameService {
 
             List<BattleshipGameInfo> chatGames = dao.getChatGames(chatId);
             System.out.println("[BATTLESHIP SERVICE]: Found " + chatGames.size() + " games in chat");
-
-            // Szukaj najnowszej aktywnej gry (WAITING, READY, lub PLAYING)
             BattleshipGameInfo activeGame = chatGames.stream()
                     .filter(game -> "WAITING".equals(game.getStatus()) ||
                             "READY".equals(game.getStatus()) ||
                             "PLAYING".equals(game.getStatus()))
-                    .findFirst() // getChatGames już sortuje po created_at DESC
+                    .findFirst()
                     .orElse(null);
 
             if (activeGame != null) {
@@ -305,9 +291,8 @@ public class BattleshipGameService {
                 return null;
             }
 
-            // czy użytkownik należy do czatu tej gry
             if (!isUserInChat(userId, gameInfo.getChatId())) {
-                return null; // Brak dostępu bo osoba nie należy do czatu
+                return null;
             }
 
             return Map.of(
@@ -327,7 +312,6 @@ public class BattleshipGameService {
         }
     }
 
-    // NOWA METODA - sprawdź czy użytkownik jest w grze
     private boolean isUserInGame(BattleshipGameInfo gameInfo, int userId) {
         return gameInfo.getPlayer1Id() == userId ||
                 (gameInfo.getPlayer2Id() != null && gameInfo.getPlayer2Id() == userId);
@@ -361,6 +345,22 @@ public class BattleshipGameService {
             return dao.getPausedGamesForUser(userId);
         } finally {
             dao.close();
+        }
+    }
+
+    public String getUserNickname(int userId) throws SQLException {
+        UsersDAO usersDAO = new UsersDAO(
+                Config.getDbUrl(),
+                Config.getDbUsername(),
+                Config.getDbPassword()
+        );
+
+        try {
+            usersDAO.connect();
+            User user = usersDAO.getUserWithId(userId);
+            return user != null ? user.getNickname() : "Gracz " + userId;
+        } finally {
+            usersDAO.close();
         }
     }
 }

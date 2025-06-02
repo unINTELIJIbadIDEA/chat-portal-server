@@ -31,7 +31,7 @@ public class BattleshipGameHandler implements HttpHandler {
 
         try {
             if (relativePath.isEmpty() || relativePath.equals("/")) {
-                // Tylko POST - tworzenie gry
+
                 if ("POST".equalsIgnoreCase(exchange.getRequestMethod())) {
                     handleCreateGame(exchange, userId);
                 } else {
@@ -43,13 +43,12 @@ public class BattleshipGameHandler implements HttpHandler {
                     String chatId = pathParts[2];
 
                     if (pathParts.length == 3 && exchange.getRequestMethod().equalsIgnoreCase("GET")) {
-                        // GET /api/battleship/chat/{chatId} - do pobierania gry dla czatu
                         handleGetChatGames(exchange, userId, chatId);
                     } else if (pathParts.length == 4 && pathParts[3].equals("join") && exchange.getRequestMethod().equalsIgnoreCase("POST")) {
-                        // POST /api/battleship/chat/{chatId}/join - dołącz do gry w czacie
+
                         handleJoinChatGame(exchange, userId, chatId);
                     } else if (pathParts.length == 4 && pathParts[3].equals("resume") && exchange.getRequestMethod().equalsIgnoreCase("POST")) {
-                        // POST /api/battleship/chat/{chatId}/resume - wznów pauzowaną grę
+
                         handleResumeGame(exchange, userId, chatId);
                     } else {
                         exchange.sendResponseHeaders(404, -1);
@@ -58,7 +57,7 @@ public class BattleshipGameHandler implements HttpHandler {
                     exchange.sendResponseHeaders(404, -1);
                 }
             } else if (relativePath.startsWith("/") && exchange.getRequestMethod().equalsIgnoreCase("GET")) {
-                // GET /api/battleship/{gameId} - informacje o grze
+
                 String gameId = relativePath.substring(1);
                 handleGetGameInfo(exchange, userId, gameId);
             } else {
@@ -69,44 +68,9 @@ public class BattleshipGameHandler implements HttpHandler {
             sendResponse(exchange, 500, "Internal Server Error");
         }
     }
-    /*
-    private void handleCreateGame(HttpExchange exchange, int userId) throws IOException {
-        Map<String, String> request = gson.fromJson(new InputStreamReader(exchange.getRequestBody()), Map.class);
-        String gameName = request.get("gameName");
-        String chatId = request.get("chatId");
-
-        if (chatId == null || chatId.trim().isEmpty()) {
-            sendResponse(exchange, 400, "Chat ID is required");
-            return;
-        }
-
-        try {
-            // czy użytkownik należy do chatu
-            if (!gameService.isUserInChat(userId, chatId)) {
-                sendResponse(exchange, 403, "You are not a member of this chat");
-                return;
-            }
-
-            String gameId = gameService.createGame(userId, gameName, chatId);
-            if (gameId != null) {
-                Map<String, Object> response = Map.of(
-                        "gameId", gameId,
-                        "status", "created",
-                        "chatId", chatId,
-                        "battleshipServerPort", gameService.getBattleshipServerPort()
-                );
-                sendResponse(exchange, 201, gson.toJson(response));
-            } else {
-                sendResponse(exchange, 500, "Failed to create game");
-            }
-        } catch (Exception e) {
-            sendResponse(exchange, 500, "Failed to create game: " + e.getMessage());
-        }
-    }*/
-
     private void handleGetChatGames(HttpExchange exchange, int userId, String chatId) throws IOException {
         try {
-            // czy użytkownik należy do chatu
+
             if (!gameService.isUserInChat(userId, chatId)) {
                 sendResponse(exchange, 403, "You are not a member of this chat");
                 return;
@@ -123,14 +87,13 @@ public class BattleshipGameHandler implements HttpHandler {
         try {
             System.out.println("[BATTLESHIP HANDLER]: Join request - User: " + userId + ", Chat: " + chatId);
 
-            // Sprawdź czy użytkownik należy do czatu
+
             if (!gameService.isUserInChat(userId, chatId)) {
                 System.out.println("[BATTLESHIP HANDLER]: User not in chat");
                 sendResponse(exchange, 403, "{\"error\": \"You are not a member of this chat\"}");
                 return;
             }
 
-            // Sprawdź czy użytkownik już ma grę w tym czacie
             BattleshipGameInfo existingGame = gameService.getUserActiveGameInChat(userId, chatId);
             if (existingGame != null) {
                 System.out.println("[BATTLESHIP HANDLER]: User already has game: " + existingGame.getGameId());
@@ -148,16 +111,15 @@ public class BattleshipGameHandler implements HttpHandler {
                 return;
             }
 
-            // Próbuj dołączyć do gry
+
             System.out.println("[BATTLESHIP HANDLER]: Attempting to join game...");
             boolean joined = gameService.joinChatGame(userId, chatId);
 
             if (joined) {
                 System.out.println("[BATTLESHIP HANDLER]: Successfully joined game");
-                // Pobierz informacje o grze do której dołączył - sprawdź wszystkie aktywne gry
+
                 var gameInfo = gameService.getActiveChatGame(chatId);
 
-                // Jeśli nie ma aktywnej gry, sprawdź czy użytkownik ma jakąkolwiek grę w tym czacie
                 if (gameInfo == null) {
                     System.out.println("[BATTLESHIP HANDLER]: No active chat game found, checking user games...");
                     gameInfo = gameService.getUserActiveGameInChat(userId, chatId);
@@ -254,7 +216,7 @@ public class BattleshipGameHandler implements HttpHandler {
         }
 
         try {
-            // === SPRAWDŹ CZŁONKOSTWO W CZACIE ===
+
             System.out.println("Checking chat membership...");
             if (!gameService.isUserInChat(userId, chatId)) {
                 System.out.println("User not in chat");
@@ -263,7 +225,6 @@ public class BattleshipGameHandler implements HttpHandler {
             }
             System.out.println("User is member of chat");
 
-            // === SPRAWDŹ ISTNIEJĄCE GRY ===
             System.out.println("Checking for existing games...");
             BattleshipGameInfo existingGame = gameService.getUserActiveGameInChat(userId, chatId);
             if (existingGame != null) {
@@ -281,7 +242,7 @@ public class BattleshipGameHandler implements HttpHandler {
                 return;
             }
 
-            // === UTWÓRZ NOWĄ GRĘ ===
+
             System.out.println("Creating new game...");
             String gameId = gameService.createGame(userId, gameName, chatId);
             if (gameId != null) {
@@ -297,13 +258,12 @@ public class BattleshipGameHandler implements HttpHandler {
                         "action", "created"
                 );
 
-                // Powiadom czat przez TCP serwer
                 try {
                     notifyChatAboutGame(chatId, response, userId);
                     System.out.println("Chat notification sent");
                 } catch (Exception e) {
                     System.err.println("Failed to notify chat: " + e.getMessage());
-                    // Nie przerywaj procesu - gra została utworzona
+
                 }
 
                 sendResponse(exchange, 201, gson.toJson(response));
@@ -329,27 +289,23 @@ public class BattleshipGameHandler implements HttpHandler {
         }
     }
 
-    // NOWA METODA - powiadomienie przez połączenie TCP
     private void notifyChatAboutGame(String chatId, Map<String, Object> gameInfo, int creatorId) {
         try {
-            // Wyślij przez wewnętrzne połączenie TCP
-            // Symulujemy wiadomość od użytkownika z informacją o grze
+
             java.net.Socket notificationSocket = new java.net.Socket("localhost", Config.getLOCAL_SERVER_PORT());
 
             java.io.ObjectOutputStream out = new java.io.ObjectOutputStream(notificationSocket.getOutputStream());
-            out.flush(); // Ważne - najpierw flush
+            out.flush();
 
-            // Wiadomość dołączenia do pokoju
+
             String token = ApiServer.getTokenManager().generateToken(String.valueOf(creatorId));
             com.project.models.message.ClientMessage joinMessage =
                     new com.project.models.message.ClientMessage("/join " + chatId, chatId, token);
             out.writeObject(joinMessage);
             out.flush();
 
-            // Krótkie opóźnienie
             Thread.sleep(100);
 
-            // Wiadomość z informacją o grze
             String gameData = gson.toJson(gameInfo);
             com.project.models.message.ClientMessage gameMessage =
                     new com.project.models.message.ClientMessage("/game_notification:" + gameData, chatId, token);
@@ -368,7 +324,7 @@ public class BattleshipGameHandler implements HttpHandler {
         }
     }
 
-    // DODAJ TĘ METODĘ NA KOŃCU KLASY, PRZED OSTATNIM }
+
 
     private void handleResumeGame(HttpExchange exchange, int userId, String chatId) throws IOException {
         try {
@@ -380,7 +336,6 @@ public class BattleshipGameHandler implements HttpHandler {
                 return;
             }
 
-            // Znajdź pauzowaną grę użytkownika
             List<BattleshipGameInfo> pausedGames = gameService.getPausedGamesForUser(userId);
             BattleshipGameInfo gameToResume = pausedGames.stream()
                     .filter(game -> game.getChatId().equals(chatId))
