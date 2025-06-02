@@ -11,9 +11,22 @@
 
     import java.io.IOException;
     import java.net.InetSocketAddress;
+    import java.util.logging.*;
 
     public class ApiServer {
 
+        private static final Logger logger = Logger.getLogger(ApiServer.class.getName());
+
+        static {
+            try {
+                FileHandler fileHandler = new FileHandler("logs/apiserver.log", true);
+                fileHandler.setFormatter(new SimpleFormatter());
+                logger.addHandler(fileHandler);
+                logger.setLevel(Level.INFO);
+            } catch (IOException e) {
+                System.err.println("Failed to initialize API logger: " + e.getMessage());
+            }
+        }
         private static final String postPath = "/api/posts";
         private static final String userPath = "/api/users";
         private static final String messagePath = "/api/messages";
@@ -44,15 +57,17 @@
                 server.createContext(authenticationPath, new AuthorizationHandler());
                 server.setExecutor(null);
                 server.start();
+                logger.info("[API SERVER]: Server started on port " + PORT);
             } catch (IOException e) {
-                System.out.println(e.getMessage());
+                logger.warning("[API SERVER]: Failed to start: " + e.getMessage());
             }
         }
 
         public void stopServer() {
             if (server != null) {
-                System.out.println("[API SERVER]: Stopping...");
+                logger.info("[API SERVER]: Stopping...");
                 server.stop(0);
+                logger.info("[API SERVER]: Server stopped.");
             }
         }
 

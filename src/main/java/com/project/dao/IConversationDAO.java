@@ -13,7 +13,7 @@ public interface IConversationDAO {
 
     void close() throws SQLException;
 
-    boolean createConversation(String roomId, String password) throws SQLException
+    boolean createConversation(String roomId, String password) throws SQLException;
 
     boolean addUserToConversation(int userId, String roomId) throws SQLException;
 
