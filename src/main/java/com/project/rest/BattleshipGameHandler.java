@@ -4,7 +4,7 @@ import com.google.gson.Gson;
 import com.project.models.battleship.BattleshipGameInfo;
 import com.project.server.ApiServer;
 import com.project.services.BattleshipGameService;
-import com.project.utils.Config;
+import com.project.config.ConfigProperties;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 
@@ -292,7 +292,7 @@ public class BattleshipGameHandler implements HttpHandler {
     private void notifyChatAboutGame(String chatId, Map<String, Object> gameInfo, int creatorId) {
         try {
 
-            java.net.Socket notificationSocket = new java.net.Socket("localhost", Config.getLOCAL_SERVER_PORT());
+            java.net.Socket notificationSocket = new java.net.Socket("localhost", ConfigProperties.getLOCAL_SERVER_PORT());
 
             java.io.ObjectOutputStream out = new java.io.ObjectOutputStream(notificationSocket.getOutputStream());
             out.flush();

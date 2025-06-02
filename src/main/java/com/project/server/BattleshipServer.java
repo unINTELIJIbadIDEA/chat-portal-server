@@ -1,9 +1,10 @@
 package com.project.server;
 
+import com.project.config.ConfigProperties;
 import com.project.models.battleship.*;
 import com.project.models.battleship.messages.*;
 import com.project.services.BattleshipGameService;
-import com.project.utils.Config;
+import com.project.config.ConfigProperties;
 
 import java.io.IOException;
 import java.net.ServerSocket;
@@ -45,8 +46,8 @@ public class BattleshipServer {
 
     public void runServer() {
         try {
-            serverSocket = new ServerSocket(Config.getBATTLESHIP_SERVER_PORT());
-            System.out.println("[BATTLESHIP SERVER]: Server started on port " + Config.getBATTLESHIP_SERVER_PORT());
+            serverSocket = new ServerSocket(ConfigProperties.getBATTLESHIP_SERVER_PORT());
+            System.out.println("[BATTLESHIP SERVER]: Server started on port " + ConfigProperties.getBATTLESHIP_SERVER_PORT());
 
             startConnectionMonitor();
 
@@ -445,7 +446,7 @@ public class BattleshipServer {
             }
 
 
-            java.net.Socket notificationSocket = new java.net.Socket("localhost", Config.getLOCAL_SERVER_PORT());
+            java.net.Socket notificationSocket = new java.net.Socket("localhost", ConfigProperties.getLOCAL_SERVER_PORT());
 
             java.io.ObjectOutputStream out = new java.io.ObjectOutputStream(notificationSocket.getOutputStream());
             out.flush();

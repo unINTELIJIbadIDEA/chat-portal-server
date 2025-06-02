@@ -39,7 +39,7 @@ public class ServerLauncher {
 
         var tcpTunnel = new SshTunnel(ConfigProperties.getREMOTE_SERVER_PORT(), ConfigProperties.getLOCAL_SERVER_PORT());
         var apiTunnel = new SshTunnel(ConfigProperties.getREMOTE_API_PORT(), ConfigProperties.getLOCAL_API_PORT());
-        var battleshipTunnel = new SshTunnel(Config.getREMOTE_BATTLESHIP_PORT(), Config.getBATTLESHIP_SERVER_PORT());
+        var battleshipTunnel = new SshTunnel(ConfigProperties.getREMOTE_BATTLESHIP_PORT(), ConfigProperties.getBATTLESHIP_SERVER_PORT());
 
 
         executor.submit(() -> {

@@ -6,7 +6,7 @@ import com.project.dao.UsersDAO;
 import com.project.models.User;
 import com.project.models.battleship.BattleshipGameInfo;
 import com.project.server.BattleshipServer;
-import com.project.utils.Config;
+import com.project.config.ConfigProperties;
 
 import java.sql.SQLException;
 import java.util.List;
@@ -15,15 +15,15 @@ import java.util.UUID;
 
 public class BattleshipGameService {
     private final BattleshipGameDAO dao = new BattleshipGameDAO(
-            Config.getDbUrl(),
-            Config.getDbUsername(),
-            Config.getDbPassword()
+            ConfigProperties.getDbUrl(),
+            ConfigProperties.getDbUsername(),
+            ConfigProperties.getDbPassword()
     );
 
     private final ConversationDAO conversationDAO = new ConversationDAO(
-            Config.getDbUrl(),
-            Config.getDbUsername(),
-            Config.getDbPassword()
+            ConfigProperties.getDbUrl(),
+            ConfigProperties.getDbUsername(),
+            ConfigProperties.getDbPassword()
     );
 
     public String createGame(int creatorId, String gameName, String chatId) throws SQLException {
@@ -318,7 +318,7 @@ public class BattleshipGameService {
     }
 
     public int getBattleshipServerPort() {
-        return Config.getBATTLESHIP_SERVER_PORT();
+        return ConfigProperties.getBATTLESHIP_SERVER_PORT();
     }
 
     public boolean pauseGame(String gameId) throws SQLException {
@@ -350,9 +350,9 @@ public class BattleshipGameService {
 
     public String getUserNickname(int userId) throws SQLException {
         UsersDAO usersDAO = new UsersDAO(
-                Config.getDbUrl(),
-                Config.getDbUsername(),
-                Config.getDbPassword()
+                ConfigProperties.getDbUrl(),
+                ConfigProperties.getDbUsername(),
+                ConfigProperties.getDbPassword()
         );
 
         try {

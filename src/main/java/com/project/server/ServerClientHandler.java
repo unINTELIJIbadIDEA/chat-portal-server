@@ -3,7 +3,7 @@ package com.project.server;
 import com.project.models.message.ClientMessage;
 import com.project.models.message.Message;
 import com.project.models.message.MessageRequest;
-import com.project.utils.Config;
+import com.project.config.ConfigProperties;
 
 import java.io.*;
 import java.net.HttpURLConnection;
