@@ -271,23 +271,4 @@ public class BattleshipGameDAO {
 
         checkTableExists();
     }
-
-    public boolean updateGameStatusOnly(String gameId, String status) throws SQLException {
-        validateConnection();
-
-        String sql = "UPDATE battleship_games SET status = ? WHERE game_id = ?";
-        try (PreparedStatement stmt = connection.prepareStatement(sql)) {
-            stmt.setString(1, status);
-            stmt.setString(2, gameId);
-            return stmt.executeUpdate() > 0;
-        }
-    }
-
-    public boolean setGamePaused(String gameId) throws SQLException {
-        return updateGameStatusOnly(gameId, "PAUSED");
-    }
-
-    public boolean setGameActive(String gameId) throws SQLException {
-        return updateGameStatusOnly(gameId, "READY");
-    }
 }
