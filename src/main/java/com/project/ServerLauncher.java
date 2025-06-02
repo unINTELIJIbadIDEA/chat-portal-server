@@ -26,7 +26,7 @@ public class ServerLauncher {
     }
 
     public static void main(String[] args) {
-        ExecutorService executor = Executors.newFixedThreadPool(2, runnable -> {
+        ExecutorService executor = Executors.newFixedThreadPool(3, runnable -> {
             Thread thread = new Thread(runnable);
             thread.setDaemon(false);
             return thread;
