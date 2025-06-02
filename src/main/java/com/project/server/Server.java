@@ -50,7 +50,7 @@ public class Server {
                 }
             }
         } catch (IOException e) {
-            logger.warning("[SERVER]: Failed to start the server: " + e.getMessage());
+            logger.severe("[SERVER]: Failed to start the server: " + e.getMessage());
         } finally {
             stopServer();
         }
@@ -63,7 +63,7 @@ public class Server {
                 serverSocket.close();
                 logger.info("[SERVER]: Server socket closed.");
             } catch (IOException e) {
-                logger.warning("[SERVER]: Error while closing server socket: " + e.getMessage());
+                logger.severe("[SERVER]: Error while closing server socket: " + e.getMessage());
             }
         }
         executor.shutdownNow();

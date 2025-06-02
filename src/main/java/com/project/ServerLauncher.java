@@ -42,7 +42,7 @@ public class ServerLauncher {
             try {
                 tcpServer.runServer();
             } catch (Exception e) {
-                logger.warning("TCP Server crashed: " + e.getMessage());
+                logger.severe("TCP Server crashed: " + e.getMessage());
             }
         });
 
@@ -51,7 +51,7 @@ public class ServerLauncher {
             try {
                 apiServer.runServer();
             } catch (Exception e) {
-                logger.warning("API Server crashed: " + e.getMessage());
+                logger.severe("API Server crashed: " + e.getMessage());
             }
         });
 
