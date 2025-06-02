@@ -6,12 +6,29 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.logging.Logger;
+import java.util.logging.FileHandler;
+import java.util.logging.SimpleFormatter;
+import java.util.logging.Level;
 
 public class Server {
+
+    private static final Logger logger = Logger.getLogger(Server.class.getName());
+    static {
+        try {
+            FileHandler fileHandler = new FileHandler("logs/server.log", true);
+            fileHandler.setFormatter(new SimpleFormatter());
+            logger.addHandler(fileHandler);
+            logger.setLevel(Level.INFO);
+        } catch (IOException e) {
+            System.err.println(" Logger initialization failed: " + e.getMessage());
+        }
+    }
 
     private final ExecutorService executor;
     private ServerSocket serverSocket;
     private volatile boolean running = true;
+
 
     public Server() {
         executor = Executors.newCachedThreadPool();
@@ -20,20 +37,20 @@ public class Server {
     public void runServer() {
         try {
             serverSocket = new ServerSocket(ConfigProperties.getLOCAL_SERVER_PORT());
-            System.out.println("[SERVER]: Server started, waiting for clients...");
+            logger.info("[SERVER]: Server started, waiting for clients...");
             while (running) {
                 try {
                     Socket socket = serverSocket.accept();
-                    System.out.println("[SERVER]: New connection from " + socket.getRemoteSocketAddress());
+                    logger.info("[SERVER]: New connection from " + socket.getRemoteSocketAddress());
                     executor.submit(new ServerClientHandler(socket));
                 } catch (IOException e) {
                     if (running) {
-                        System.err.println("[SERVER]: Error accepting connection: " + e.getMessage());
+                        logger.warning("[SERVER]: Error while accepting client connection: " + e.getMessage());
                     }
                 }
             }
         } catch (IOException e) {
-            System.err.println("[SERVER]: Failed to start: " + e.getMessage());
+            logger.warning("[SERVER]: Failed to start the server: " + e.getMessage());
         } finally {
             stopServer();
         }
@@ -44,13 +61,13 @@ public class Server {
         if (serverSocket != null && !serverSocket.isClosed()) {
             try {
                 serverSocket.close();
-                System.out.println("[SERVER]: Socket closed.");
+                logger.info("[SERVER]: Server socket closed.");
             } catch (IOException e) {
-                System.err.println("[SERVER]: Error closing socket: " + e.getMessage());
+                logger.warning("[SERVER]: Error while closing server socket: " + e.getMessage());
             }
         }
         executor.shutdownNow();
-        System.out.println("[SERVER]: Executor shutdown.");
+        logger.info("[SERVER]: Executor service shutdown.");
     }
 
     //niech pozostanie do testów
