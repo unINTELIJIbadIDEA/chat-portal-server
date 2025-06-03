@@ -1,5 +1,6 @@
 package com.project.config;
 
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Properties;
@@ -8,13 +9,11 @@ public class ConfigProperties {
     private static final Properties properties = new Properties();
 
     static {
-        try (InputStream input = ConfigProperties.class.getClassLoader().getResourceAsStream("config.properties")) {
-            if (input == null) {
-                System.out.println("Sorry, unable to find config.properties");
-            }
+        try (InputStream input = new FileInputStream("config.properties")) {
             properties.load(input);
+            System.out.println("Loaded config from file.");
         } catch (IOException e) {
-            System.out.println(e.getMessage());
+            System.err.println("Could not load config.properties: " + e.getMessage());
         }
     }
 

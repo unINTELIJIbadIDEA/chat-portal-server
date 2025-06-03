@@ -41,22 +41,19 @@ public class ServerSessionManager {
         sessions.remove(roomID);
     }
 
-    public boolean addClientToSession(String roomID, ServerClientHandler client) {
+    public void addClientToSession(String roomID, ServerClientHandler client) {
         Conversation room = sessions.computeIfAbsent(roomID, k -> new Conversation(roomID));
         room.registerObserver(client);
-        return true;
     }
 
-    public boolean removeClientFromSession(String roomID, ServerClientHandler client) {
+    public void removeClientFromSession(String roomID, ServerClientHandler client) {
         Conversation room = sessions.get(roomID);
         if (room != null) {
             room.removeObserver(client);
             if (room.getObserverCount() == 0) {
                 removeSession(roomID);
             }
-            return true;
         }
-        return false;
     }
 
     public boolean sessionExists(String roomID) {
